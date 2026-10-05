@@ -1,0 +1,97 @@
+/*
+ * bb/cascades/ArrayDataModel 的最小替身（仅本机编译检查用）
+ *
+ * 为什么需要这个文件：
+ *   TiebaController.cpp 用了 Cascades 的 ArrayDataModel，而开发机上没有 Cascades
+ *   头文件，所以 tests/run-tests.ps1 无法直接编译它做签名检查。
+ *   这里按官方头文件的真实签名（Q_SLOT void append(const QVariantList&)、
+ *   Q_SLOT void clear()）做一个同签名的假实现，把 tests/stubs 放到 include
+ *   路径最前面，就能在桌面 Qt 上验证 TiebaController 与后端层是否还对得上。
+ *
+ *   ★ 这个文件不会进入 bar 包（只有 tests/run-tests.ps1 会用到它）。
+ *     真机构建时用的是 NDK 里真正的 bb/cascades/ArrayDataModel。
+ */
+
+#ifndef TB_TEST_STUB_ARRAYDATAMODEL_HPP
+#define TB_TEST_STUB_ARRAYDATAMODEL_HPP
+
+#include <QObject>
+#include <QVariant>
+#include <QVariantList>
+
+namespace bb {
+namespace cascades {
+
+class ArrayDataModel : public QObject
+{
+    /*
+     * ★ 这里刻意**不用 Q_OBJECT**。
+     *
+     * 存根只用于开发机上的类型/签名检查，不需要真正的信号槽机制。
+     * 带了 Q_OBJECT 就必须跑 moc，否则链接时报
+     *     "undefined reference to vtable for bb::cascades::ArrayDataModel"
+     * 而去掉它能省掉一整套 moc 处理，开发机测试更简单。
+     */
+public:
+    explicit ArrayDataModel(QObject *parent = 0)
+        : QObject(parent)
+    {
+    }
+
+    virtual ~ArrayDataModel() {}
+
+public slots:
+    void append(const QVariantList &values) { m_values += values; }
+    void append(const QVariant &value) { m_values.append(value); }
+    void clear() { m_values.clear(); }
+    void insert(int i, const QVariant &value)
+    {
+        if (i < 0 || i > m_values.size())
+            return;
+        m_values.insert(i, value);
+    }
+    void insert(int i, const QVariantList &values)
+    {
+        if (i < 0 || i > m_values.size())
+            return;
+        for (int k = 0; k < values.size(); ++k)
+            m_values.insert(i + k, values.at(k));
+    }
+    void removeAt(int i)
+    {
+        if (i >= 0 && i < m_values.size())
+            m_values.removeAt(i);
+    }
+    /*!
+     * 就地替换第 i 项。
+     *
+     * 真机签名已核对 NDK 的
+     *   databinding/arraydatamodel.h:  Q_SLOT void replace(int i, const QVariant &value);
+     *
+     * ★ 这是"图片下完后更新模型"的正确接口。
+     *   用 clear() + append() 整表重建会在 ListView 遍历时造成
+     *   use-after-free（真机上表现为堆损坏 + 闪退：
+     *   "free malloc object that is not allocated"）。
+     */
+    void replace(int i, const QVariant &value)
+    {
+        if (i >= 0 && i < m_values.size())
+            m_values[i] = value;
+    }
+
+public:
+    int size() const { return m_values.size(); }
+    bool isEmpty() const { return m_values.isEmpty(); }
+    QVariant value(int i) const
+    {
+        return (i >= 0 && i < m_values.size()) ? m_values.at(i) : QVariant();
+    }
+
+private:
+    QVariantList m_values;
+};
+
+} // namespace cascades
+} // namespace bb
+
+#endif // TB_TEST_STUB_ARRAYDATAMODEL_HPP
