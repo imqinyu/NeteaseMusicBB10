@@ -127,7 +127,9 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/nm/util/NmAudioCache.cpp) \
         $$quote($$BASEDIR/src/nm/util/NmImageCache.cpp) \
         $$quote($$BASEDIR/src/nm/util/NmJson.cpp) \
-        $$quote($$BASEDIR/src/nm/util/NmString.cpp)
+        $$quote($$BASEDIR/src/nm/util/NmQrCode.cpp) \
+        $$quote($$BASEDIR/src/nm/util/NmString.cpp) \
+        $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.cpp)
 
     HEADERS += \
         $$quote($$BASEDIR/src/MusicController.hpp) \
@@ -141,8 +143,10 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/nm/util/NmAudioCache.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmImageCache.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmJson.hpp) \
+        $$quote($$BASEDIR/src/nm/util/NmQrCode.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmString.hpp) \
-        $$quote($$BASEDIR/src/nm/util/NmTr.hpp)
+        $$quote($$BASEDIR/src/nm/util/NmTr.hpp) \
+        $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.h)
 }
 
 CONFIG += precompile_header
@@ -186,6 +190,11 @@ lupdate_inclusion {
         $$quote($$BASEDIR/../src/nm/util/*.cc) \
         $$quote($$BASEDIR/../src/nm/util/*.cpp) \
         $$quote($$BASEDIR/../src/nm/util/*.cxx) \
+        $$quote($$BASEDIR/../src/nm/util/qrcodegen/*.c) \
+        $$quote($$BASEDIR/../src/nm/util/qrcodegen/*.c++) \
+        $$quote($$BASEDIR/../src/nm/util/qrcodegen/*.cc) \
+        $$quote($$BASEDIR/../src/nm/util/qrcodegen/*.cpp) \
+        $$quote($$BASEDIR/../src/nm/util/qrcodegen/*.cxx) \
         $$quote($$BASEDIR/../assets/*.qml) \
         $$quote($$BASEDIR/../assets/*.js) \
         $$quote($$BASEDIR/../assets/*.qs) \
