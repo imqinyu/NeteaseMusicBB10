@@ -44,6 +44,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/ArtistDetailPage.qml) \
         $$quote($$BASEDIR/assets/ArtistListItem.qml) \
         $$quote($$BASEDIR/assets/ArtistsPage.qml) \
+        $$quote($$BASEDIR/assets/BarcodeLoginPage.qml) \
         $$quote($$BASEDIR/assets/CommentsPage.qml) \
         $$quote($$BASEDIR/assets/DebugPage.qml) \
         $$quote($$BASEDIR/assets/LoginPage.qml) \
@@ -98,6 +99,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/icons/ic_repeat_one_active.png) \
         $$quote($$BASEDIR/assets/icons/ic_repeat_one_focus.png) \
         $$quote($$BASEDIR/assets/icons/ic_review_add.png) \
+        $$quote($$BASEDIR/assets/icons/ic_scan_barcode.png) \
         $$quote($$BASEDIR/assets/icons/ic_search.png) \
         $$quote($$BASEDIR/assets/icons/ic_share.png) \
         $$quote($$BASEDIR/assets/icons/ic_shuffle_all.png) \

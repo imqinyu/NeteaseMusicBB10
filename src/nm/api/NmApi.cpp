@@ -218,6 +218,29 @@ int NmApi::fetchLyric(qint64 songId)
     return sendGet(QLatin1String(tagLyric()), QLatin1String("/song/lyric"), params);
 }
 
+int NmApi::fetchQrKey()
+{
+    /*
+     * 扫码登录第一步。type=3 表示"生成给 PC/网页端用的登录二维码"
+     * （照参考项目 cloudmusicqt 的取值）。
+     */
+    QList<KeyValue> params;
+    params.append(qMakePair(QString(QLatin1String("type")),
+                            QString::number(3)));
+    return sendGet(QLatin1String(tagQrKey()),
+                   QLatin1String("/login/qrcode/unikey"), params);
+}
+
+int NmApi::fetchQrStatus(const QString &key)
+{
+    QList<KeyValue> params;
+    params.append(qMakePair(QString(QLatin1String("key")), key));
+    params.append(qMakePair(QString(QLatin1String("type")),
+                            QString::number(3)));
+    return sendGet(QLatin1String(tagQrStatus()),
+                   QLatin1String("/login/qrcode/client/login"), params);
+}
+
 int NmApi::fetchPlaylistComments(qint64 playlistId, int limit, int offset)
 {
     const QString path = QString(QLatin1String("/v1/resource/comments/A_PL_0_%1"))
@@ -410,6 +433,23 @@ void NmApi::onHttpFinished(int requestId, const QString &tag,
     if (tag == QLatin1String(tagLyric())) {
         NmParsers::LyricParse result = NmParsers::parseLyric(json);
         emit lyricFinished(requestId, result);
+        return;
+    }
+
+    /*
+     * 扫码登录的两个响应。
+     * ★ 别忘了加分派 —— 歌词那次的教训：请求发得出去、200 也回来了，
+     *   但这里匹配不到分支就被静默丢掉，表现为"点了没反应"。
+     */
+    if (tag == QLatin1String(tagQrKey())) {
+        NmParsers::QrKeyParse result = NmParsers::parseQrKey(json);
+        emit qrKeyFinished(requestId, result);
+        return;
+    }
+
+    if (tag == QLatin1String(tagQrStatus())) {
+        NmParsers::QrStatusParse result = NmParsers::parseQrStatus(json);
+        emit qrStatusFinished(requestId, result);
         return;
     }
 }

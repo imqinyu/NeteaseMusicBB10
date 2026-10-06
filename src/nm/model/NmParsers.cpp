@@ -637,6 +637,47 @@ NmParsers::LyricParse NmParsers::parseLyric(const NmJson &root)
     return out;
 }
 
+NmParsers::QrKeyParse NmParsers::parseQrKey(const NmJson &root)
+{
+    QrKeyParse out;
+
+    if (!root.isObject()) {
+        out.error = NmTr("E5938DE5BA94E4B88DE698AFE59088E6B395JSON");
+        return out;
+    }
+
+    out.code = (int)root.member(QLatin1String("code")).toLongLong(200);
+
+    /*
+     * 响应形如 {"code":200,"unikey":"9f8a..."}
+     * 拿到 key 后拼成登录 URL：http://music.163.com/login?codekey=<unikey>
+     */
+    out.unikey = root.member(QLatin1String("unikey")).toString();
+
+    out.ok = true;
+    return out;
+}
+
+NmParsers::QrStatusParse NmParsers::parseQrStatus(const NmJson &root)
+{
+    QrStatusParse out;
+
+    if (!root.isObject()) {
+        out.error = NmTr("E5938DE5BA94E4B88DE698AFE59088E6B395JSON");
+        return out;
+    }
+
+    /*
+     * 响应里就 code 有用：800 过期 / 801 待扫码 / 802 待确认 / 803 成功。
+     * ★ 803 这次响应会带 Set-Cookie（MUSIC_U）—— 但那是在
+     *   NmHttpClient 里统一收的，不归这里管。
+     */
+    out.code = (int)root.member(QLatin1String("code")).toLongLong(0);
+
+    out.ok = true;
+    return out;
+}
+
 NmParsers::CommentsParse NmParsers::parseComments(const NmJson &root)
 {
     CommentsParse out;

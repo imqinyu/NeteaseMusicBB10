@@ -63,7 +63,19 @@ TabbedPane {
         if (!music.loggedIn)
             return
         var nav = root.activePane
-        if (nav && nav.top && nav.top.objectName == "loginPage")
+        if (!nav)
+            return
+
+        /*
+         * ★ 扫码登录页是【叠在登录页之上】推的（栈：… → loginPage →
+         *   barcodeLoginPage），所以登录成功后要连着弹两层才回得到进入前的
+         *   页面 —— 只弹一层的话会卡在登录页上。
+         *
+         *   粘贴登录那条路只有一层，第一个 if 不命中，行为不变。
+         */
+        if (nav.top && nav.top.objectName == "barcodeLoginPage")
+            nav.pop()
+        if (nav.top && nav.top.objectName == "loginPage")
             nav.pop()
     }
 
@@ -97,6 +109,8 @@ TabbedPane {
             root.pushUserDetail(arg)
         else if (kind == "login")
             root.pushLogin()
+        else if (kind == "barcodeLogin")
+            root.pushBarcodeLogin()
     }
 
     /*
@@ -202,6 +216,10 @@ TabbedPane {
     }
     function pushLogin() {
         pushPage(loginPageDef)
+    }
+    /* 扫码登录页。登录页里点「二维码登录」时用（music.requestOpenBarcodeLogin） */
+    function pushBarcodeLogin() {
+        pushPage(barcodeLoginPageDef)
     }
     /* 账号管理页（多账号）：新增账号从那一页里点，走 music.requestOpenLogin() */
     function pushAccountManage() {
@@ -1371,6 +1389,10 @@ TabbedPane {
         ComponentDefinition {
             id: loginPageDef
             source: "LoginPage.qml"
+        },
+        ComponentDefinition {
+            id: barcodeLoginPageDef
+            source: "BarcodeLoginPage.qml"
         },
         ComponentDefinition {
             id: searchPageDef

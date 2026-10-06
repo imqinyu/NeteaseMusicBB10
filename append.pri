@@ -62,6 +62,23 @@ for(NM_FILE, NM_LAYER_HEADERS) {
 message(NeteaseMusic: append.pri added $$size(NM_ADDED_SOURCES) source(s); total sources = $$size(SOURCES))
 
 # ---------------------------------------------------------------------------
+# 1b) 二维码生成（扫码登录用）
+#
+#     qrcodegen（Project Nayuki，MIT）是纯 C 实现，不用 malloc，只靠调用方
+#     给的缓冲区，没有额外依赖。子目录里的文件扫不到（上面只通配 util/*.cpp），
+#     所以单独列出来。
+#
+#     ★★ 为什么扩展名是 .cpp 而不是 .c（实测踩过）：
+#        本项目开了预编译头，qmake 会给【每一个】源文件都加
+#        -include precompiled.h，而那是 C++ 头。用 C 编译器编 .c 就会
+#        在处理 precompiled.h 时炸掉：
+#            qnamespace.h:54: error: unknown type name 'namespace'
+#        改名成 .cpp 走 C++ 编译器即可 —— qrcodegen.h 里已经有
+#        extern "C" 包裹，链接符号不受影响。
+# ---------------------------------------------------------------------------
+SOURCES += $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.cpp)
+
+# ---------------------------------------------------------------------------
 # 2) 头文件搜索路径：代码里用 #include "net/NmHttpClient.hpp" 这种相对
 #    src/nm 的写法，所以要把 src/nm 和 src 都加进来。
 # ---------------------------------------------------------------------------

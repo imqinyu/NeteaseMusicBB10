@@ -28,6 +28,7 @@
 #include "net/NmCookieStore.hpp"
 #include "session/NmSession.hpp"
 #include "util/NmImageCache.hpp"
+#include "util/NmQrCode.hpp"
 #include "util/NmTr.hpp"
 
 using namespace bb::cascades;
@@ -190,6 +191,9 @@ MusicController::MusicController(QObject *parent)
     //   -Wreorder，这里直接赋值更省事
     m_advanceHandled = false;
     m_lyricSongId = 0;
+    m_cookieStore = 0;
+    m_qrStatus = 0;
+    m_qrTimer = 0;
 
     // 轻提示固定在【屏幕底部】（默认在正中，会挡住封面和时间条）
     m_toast->setPosition(bb::system::SystemUiPosition::BottomCenter);
@@ -319,6 +323,35 @@ MusicController::MusicController(QObject *parent)
             this, SLOT(onLyricFinished(int, nm::NmParsers::LyricParse)));
 
     /*
+     * ★★ cookie 存储必须注入给 http client。
+     *
+     *   之前【没人】调过 setCookieStore，于是 NmHttpClient 里那段收集
+     *   Set-Cookie 的代码一直在空转（它只在 m_cookieStore 非空时才收）。
+     *   扫码登录授权成功（code 803）那次响应正是靠 Set-Cookie 把 MUSIC_U
+     *   带回来的 —— 不注入就永远拿不到凭证。
+     *
+     *   ★ 对现有请求没影响：NmApi::commonHeaders() 只在【已登录】时才带
+     *     Cookie 头，而 NmHttpClient 是"没显式给 Cookie 才用 cookie 存储补"，
+     *     所以登录后的请求照旧走 NmSession 的凭证。
+     */
+    /*
+     * ★ NmCookieStore 不是 QObject（没有 parent 参数），所以它不像别的成员
+     *   那样能挂 this 自动回收 —— 析构函数里要手动 delete。
+     */
+    m_cookieStore = new nm::NmCookieStore();
+    m_http->setCookieStore(m_cookieStore);
+
+    // ---- 扫码登录 ----
+    connect(m_api, SIGNAL(qrKeyFinished(int, nm::NmParsers::QrKeyParse)),
+            this, SLOT(onQrKeyFinished(int, nm::NmParsers::QrKeyParse)));
+    connect(m_api, SIGNAL(qrStatusFinished(int, nm::NmParsers::QrStatusParse)),
+            this, SLOT(onQrStatusFinished(int, nm::NmParsers::QrStatusParse)));
+
+    m_qrTimer = new QTimer(this);
+    m_qrTimer->setInterval(3000);       // 参考项目 cloudmusicqt 就是这个间隔
+    connect(m_qrTimer, SIGNAL(timeout()), this, SLOT(onQrPollTick()));
+
+    /*
      * ★★ 构建标记（诊断用）。
      *   直接 fprintf 到 stderr，【不经过 qWarning】，所以不会被"输出控制台
      *   日志"开关吞掉、也不会被消息处理器过滤 —— 只要启动就一定打印。
@@ -331,6 +364,8 @@ MusicController::MusicController(QObject *parent)
 
 MusicController::~MusicController()
 {
+    // NmCookieStore 不是 QObject，没有 parent 自动回收（见构造函数里的注入）
+    delete m_cookieStore;
 }
 
 ArrayDataModel *MusicController::songs() const
@@ -428,6 +463,171 @@ void MusicController::logout()
     emit loginChanged();
 }
 
+// ===================== 扫码登录（二维码） =====================
+//
+// 流程和参考项目 cloudmusicqt 一致：
+//   1) GET /api/login/qrcode/unikey?type=3          → 拿 key
+//   2) 本地把 "http://music.163.com/login?codekey=<key>" 画成二维码
+//   3) 每 3 秒 GET /api/login/qrcode/client/login     → 问状态
+//        800 过期 / 801 待扫码 / 802 待确认 / 803 成功
+//   4) 803 那次响应带 Set-Cookie（MUSIC_U），取出来走和"粘贴登录"一样的校验
+//
+// ============================================================
+
+void MusicController::setQrState(int status, const QString &text)
+{
+    m_qrStatus = status;
+    m_qrStatusText = text;
+    emit qrStateChanged();
+}
+
+void MusicController::startQrLogin()
+{
+    if (m_loggedIn) {
+        setQrState(4, QString::fromUtf8("已经登录了"));
+        return;
+    }
+
+    m_qrKey.clear();
+    m_qrImagePath.clear();
+    setQrState(1, QString::fromUtf8("正在获取二维码…"));
+
+    m_api->fetchQrKey();
+}
+
+void MusicController::refreshQrLogin()
+{
+    cancelQrLogin();
+    startQrLogin();
+}
+
+void MusicController::cancelQrLogin()
+{
+    // ★ 离开页面一定要停：否则定时器会在后台一直发轮询请求
+    if (m_qrTimer)
+        m_qrTimer->stop();
+    m_qrKey.clear();
+    setQrState(0, QString());
+}
+
+void MusicController::onQrKeyFinished(int requestId,
+                                      const nm::NmParsers::QrKeyParse &result)
+{
+    Q_UNUSED(requestId);
+
+    if (!result.ok || result.unikey.isEmpty()) {
+        qWarning("MusicController: qr key FAILED ok=%d code=%d",
+                 result.ok ? 1 : 0, result.code);
+        setQrState(6, QString::fromUtf8("二维码获取失败，请点刷新重试"));
+        return;
+    }
+
+    m_qrKey = result.unikey;
+
+    /*
+     * 二维码内容就是网易这个登录地址（照参考项目）。
+     * 图片本地画（见 NmQrCode 头注释里为什么不用服务端出图）。
+     */
+    const QString url = QLatin1String("http://music.163.com/login?codekey=")
+                        + m_qrKey;
+    /*
+     * ★ 文件名带上 key：刷新时路径会变，QML 那边 imageSource 的值才跟着变，
+     *   ImageView 才会重新加载新图。用固定文件名的话值没变化，
+     *   会一直显示上一张（参考项目用 SVG 文本没这个问题）。
+     */
+    const QString path = QDir::homePath()
+                         + QLatin1String("/nm-qrlogin-") + m_qrKey
+                         + QLatin1String(".png");
+
+    if (! nm::NmQrCode::writePng(url, path)) {
+        qWarning("MusicController: qr encode FAILED key=%s",
+                 qPrintable(m_qrKey.left(8)));
+        setQrState(6, QString::fromUtf8("二维码生成失败"));
+        return;
+    }
+
+    m_qrImagePath = QUrl::fromLocalFile(path).toString();
+    qWarning("MusicController: qr ready key=%s", qPrintable(m_qrKey.left(8)));
+
+    setQrState(2, QString::fromUtf8("请用网易云音乐 App 扫码"));
+
+    if (m_qrTimer)
+        m_qrTimer->start();
+}
+
+void MusicController::onQrPollTick()
+{
+    if (m_qrKey.isEmpty()) {
+        if (m_qrTimer)
+            m_qrTimer->stop();
+        return;
+    }
+    m_api->fetchQrStatus(m_qrKey);
+}
+
+void MusicController::onQrStatusFinished(int requestId,
+                                         const nm::NmParsers::QrStatusParse &result)
+{
+    Q_UNUSED(requestId);
+
+    if (!result.ok)
+        return;          // 单次轮询失败不打扰用户，下一拍（3 秒后）继续
+
+    switch (result.code) {
+
+    case 800:            // 二维码过期
+        if (m_qrTimer)
+            m_qrTimer->stop();
+        setQrState(5, QString::fromUtf8("二维码已过期，请点刷新"));
+        break;
+
+    case 801:            // 还没人扫
+        if (m_qrStatus != 2)
+            setQrState(2, QString::fromUtf8("请用网易云音乐 App 扫码"));
+        break;
+
+    case 802:            // 扫了，等手机上点确认
+        setQrState(3, QString::fromUtf8("已扫码，请在手机上确认"));
+        break;
+
+    case 803:            // 授权成功
+    {
+        if (m_qrTimer)
+            m_qrTimer->stop();
+
+        /*
+         * ★ 凭证在这次响应的 Set-Cookie 里 —— NmHttpClient 已经收进
+         *   m_cookieStore（构造函数里注入的），从这里取出来。
+         */
+        const QString musicU = m_cookieStore
+                               ? m_cookieStore->value(QLatin1String("MUSIC_U"))
+                               : QString();
+        if (musicU.isEmpty()) {
+            qWarning("MusicController: qr authorized but NO MUSIC_U in cookie");
+            setQrState(6, QString::fromUtf8("授权成功，但没拿到登录凭证"));
+            return;
+        }
+
+        if (! m_session->setCookieInput(musicU)) {
+            setQrState(6, QString::fromUtf8("登录凭证无效"));
+            return;
+        }
+
+        /*
+         * 后面和「粘贴登录」完全一致：校验一次，成功会自动拉歌单等级那些
+         * （见 onAccountFinished）。
+         */
+        setQrState(4, QString::fromUtf8("授权成功，正在登录…"));
+        setLoading(true);
+        m_api->fetchAccount();
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
 // ===================== 账号管理（多账号） =====================
 
 QVariantMap MusicController::currentAccount() const
@@ -512,6 +712,17 @@ QString MusicController::accountCredential(const QString &id) const
 void MusicController::requestOpenLogin()
 {
     m_openRequestKind = QLatin1String("login");
+    m_openRequestArg.clear();
+    scheduleOpenRequest();
+}
+
+void MusicController::requestOpenBarcodeLogin()
+{
+    /*
+     * 扫码登录页。走的是"属性 + 版本号"那套（和 requestOpenLogin 一样）：
+     * 子页面拿不到 NavigationPane，只能把请求发回来，由 main.qml 推页。
+     */
+    m_openRequestKind = QLatin1String("barcodeLogin");
     m_openRequestArg.clear();
     scheduleOpenRequest();
 }

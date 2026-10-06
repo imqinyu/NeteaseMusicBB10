@@ -49,6 +49,17 @@ ActionItem {
                 loginPage.inputError = ""
             }
 
+        },
+ActionItem {
+            title: qsTr("二维码登录")
+            ActionBar.placement: ActionBarPlacement.OnBar
+            imageSource: "asset:///icons/ic_scan_barcode.png"
+            onTriggered: {
+                // 子页面拿不到 NavigationPane，只能把请求发回 main.qml 推页
+                // （和账号管理页「新增账号」同一套机制）
+                music.requestOpenBarcodeLogin()
+            }
+
         }]
     // 登录成功后的自动返回放在主页面做（那里才拿得到 NavigationPane；
     // 子页面里存 nav 对象会踩 "Unable to set property"）

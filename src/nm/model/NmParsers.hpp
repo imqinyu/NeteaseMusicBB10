@@ -227,6 +227,52 @@ public:
         }
     };
 
+    /*!
+     * /api/login/qrcode/unikey 的结果（扫码登录第一步：拿二维码 key）。
+     *
+     * ★ 用的是【老接口族】（/api/login/qrcode/*），和参考项目
+     *   cloudmusicqt 一致 —— 那套已在真机上验证过。新版 /login/qr/*
+     *   不保证混用可用，所以别改过去。
+     */
+    struct QrKeyParse
+    {
+        bool ok;
+        QString error;
+        int code;
+        /*! 二维码 key。拼进登录 URL：music.163.com/login?codekey=<unikey> */
+        QString unikey;
+
+        QrKeyParse()
+            : ok(false)
+            , code(0)
+        {
+        }
+    };
+
+    /*!
+     * /api/login/qrcode/client/login 的结果（扫码登录第二步：轮询状态）。
+     *
+     * code 的含义（服务端约定）：
+     *   800  二维码已过期，需要重新获取 key
+     *   801  等待扫码
+     *   802  已扫码、等待用户在手机上确认
+     *   803  授权成功 —— 这一次响应会带 Set-Cookie（MUSIC_U），
+     *        NmHttpClient 已经自动收进 cookie 存储了
+     */
+    struct QrStatusParse
+    {
+        bool ok;
+        QString error;
+        /*! 上面的 800 / 801 / 802 / 803 */
+        int code;
+
+        QrStatusParse()
+            : ok(false)
+            , code(0)
+        {
+        }
+    };
+
     /*! /api/v1/resource/comments/R_SO_4_<id>（歌曲评论）的结果 */
     struct CommentsParse
     {
@@ -321,6 +367,12 @@ public:
 
     /*! /api/song/lyric 的响应（lrc.lyric / tlyric.lyric） */
     static LyricParse parseLyric(const NmJson &root);
+
+    /*! /api/login/qrcode/unikey 的响应（扫码登录：取二维码 key） */
+    static QrKeyParse parseQrKey(const NmJson &root);
+
+    /*! /api/login/qrcode/client/login 的响应（扫码登录：轮询状态） */
+    static QrStatusParse parseQrStatus(const NmJson &root);
 
     /*! /api/user/level 的响应 */
     static LevelParse parseLevel(const NmJson &root);

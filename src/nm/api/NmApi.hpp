@@ -131,6 +131,24 @@ public:
      */
     int fetchLyric(qint64 songId);
 
+    /*!
+     * 扫码登录第一步：取二维码 key（/api/login/qrcode/unikey）
+     *
+     * ★ 走的是【老接口族】，和参考项目 cloudmusicqt 一致。
+     *   新版那套是 /login/qr/key + /login/qr/create + /login/qr/check，
+     *   两者的 key 不通用，别混着用。
+     */
+    int fetchQrKey();
+
+    /*!
+     * 扫码登录第二步：轮询二维码状态（/api/login/qrcode/client/login）
+     *
+     * 返回的 code：800 过期 / 801 待扫码 / 802 待确认 / 803 成功。
+     * ★ 803 那一次响应会带 Set-Cookie（MUSIC_U），NmHttpClient 已经统一
+     *   收进 cookie 存储了，调用方去 NmCookieStore 取即可。
+     */
+    int fetchQrStatus(const QString &key);
+
     /*! 业务 tag 常量（onRequestFailed 里区分来源用） */
     static const char *tagSearch()   { return "search"; }
     static const char *tagPlaylist() { return "playlist"; }
@@ -149,6 +167,8 @@ public:
     static const char *tagCloud()         { return "cloud"; }
     static const char *tagAlbum()         { return "album"; }
     static const char *tagLyric()         { return "lyric"; }
+    static const char *tagQrKey()         { return "qrKey"; }
+    static const char *tagQrStatus()      { return "qrStatus"; }
 
 signals:
     void searchFinished(int requestId, const nm::NmParsers::SearchParse &result);
@@ -172,6 +192,8 @@ signals:
     void cloudFinished(int requestId, const nm::NmParsers::CloudParse &result);
     void albumFinished(int requestId, const nm::NmParsers::PlaylistParse &result);
     void lyricFinished(int requestId, const nm::NmParsers::LyricParse &result);
+    void qrKeyFinished(int requestId, const nm::NmParsers::QrKeyParse &result);
+    void qrStatusFinished(int requestId, const nm::NmParsers::QrStatusParse &result);
 
     /*! 网络/HTTP 层失败（非 2xx、超时、断网等） */
     void requestFailed(int requestId, const QString &tag, const QString &message,

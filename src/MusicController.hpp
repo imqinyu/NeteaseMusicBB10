@@ -171,6 +171,17 @@ class MusicController : public QObject
     /*! 播放进度（毫秒）。C++ 侧用 QTimer 每 250ms 推一次，供进度条跟随 */
     Q_PROPERTY(int playerPosition READ playerPosition NOTIFY playerPositionChanged)
 
+    /*!
+     * 扫码登录的状态。取值：
+     *   0 空闲   1 正在取二维码   2 等待扫码   3 已扫码待确认
+     *   4 成功   5 二维码已过期   6 失败
+     */
+    Q_PROPERTY(int qrStatus READ qrStatus NOTIFY qrStateChanged)
+    /*! 二维码图片的 file:// 路径（还没拿到时是空串） */
+    Q_PROPERTY(QString qrImagePath READ qrImagePath NOTIFY qrStateChanged)
+    /*! 给界面显示的一句提示（"请用网易云音乐 App 扫码" 之类） */
+    Q_PROPERTY(QString qrStatusText READ qrStatusText NOTIFY qrStateChanged)
+
     /*! 循环模式：1=列表循环 2=单曲循环（默认 1） */
     Q_PROPERTY(int repeatMode READ repeatMode NOTIFY repeatModeChanged)
 
@@ -686,6 +697,12 @@ public:
     /*! 请求打开登录页（账号管理页的「新增账号」用，走 openRequest 机制） */
     Q_INVOKABLE void requestOpenLogin();
 
+    /*!
+     * 请求打开【扫码登录】页（登录页的「二维码登录」用）。
+     * 同样走 openRequest 机制 —— 子页面推不了页，只能发请求回来给 main.qml。
+     */
+    Q_INVOKABLE void requestOpenBarcodeLogin();
+
     /*! 搜索单曲（结果会替换 songs） */
     Q_INVOKABLE void search(const QString &keyword);
 
@@ -871,6 +888,28 @@ public:
      */
     bool applyLyricFromCache(qint64 songId);
 
+    /*! ---- 扫码登录（二维码） ---- */
+
+    /*!
+     * 开始一轮扫码登录：取 key → 本地画出二维码 → 起轮询。
+     * 页面打开时调一次；状态通过 qrStatus / qrImagePath / qrStatusText 反映。
+     */
+    Q_INVOKABLE void startQrLogin();
+    /*! 重新取一个二维码（二维码过期，或用户点了刷新） */
+    Q_INVOKABLE void refreshQrLogin();
+    /*! 离开页面时调：停掉轮询，别在后台一直发请求 */
+    Q_INVOKABLE void cancelQrLogin();
+
+    int qrStatus() const { return m_qrStatus; }
+    QString qrImagePath() const { return m_qrImagePath; }
+    QString qrStatusText() const { return m_qrStatusText; }
+
+private:
+    /*! 内部用：改扫码登录状态（状态 + 提示文字一起刷，见 qrStateChanged） */
+    void setQrState(int status, const QString &text);
+
+public:
+
     /*! 下一首 / 上一首（循环）。等价于 playIndex(currentIndex±1)。 */
     Q_INVOKABLE void next();
     Q_INVOKABLE void prev();
@@ -1052,6 +1091,8 @@ signals:
     void errorMessageChanged();
     void errorDetailChanged();
     void lastRawChanged();
+    /*! 扫码登录状态变了（qrStatus / qrImagePath / qrStatusText 三个一起刷） */
+    void qrStateChanged();
     void loginChanged();
     void lastLoginErrorChanged();
     void bitrateChanged(int br);
@@ -1083,6 +1124,19 @@ private slots:
     void onSearchDebounce();
     /*! 歌词接口回来（见 fetchLyric） */
     void onLyricFinished(int requestId, const nm::NmParsers::LyricParse &result);
+
+    /*!
+     * 扫码登录：二维码 key 回来了（见 startQrLogin）。
+     * 拿到 key 后拼登录 URL、本地画二维码，然后起轮询。
+     */
+    void onQrKeyFinished(int requestId, const nm::NmParsers::QrKeyParse &result);
+    /*!
+     * 扫码登录：一次状态轮询回来了。
+     * code 800 过期 / 801 待扫码 / 802 待确认 / 803 成功（会带 Set-Cookie）。
+     */
+    void onQrStatusFinished(int requestId, const nm::NmParsers::QrStatusParse &result);
+    /*! 轮询定时器：每 3 秒问一次状态（参考项目就是这个间隔） */
+    void onQrPollTick();
 
     /*!
      * 一首播完 —— 由 applicationui 直接连到播放器的 playbackCompleted()。
@@ -1349,6 +1403,23 @@ private:
      *   所以在 playIndex 发请求前记下来（见 saveLyricToCache / applyLyricFromCache）。
      */
     qint64 m_lyricSongId;
+
+    /*!
+     * cookie 存储。★ 必须注入给 m_http，否则 NmHttpClient 里那段收集
+     * Set-Cookie 的代码等于白写（它只在 m_cookieStore 非空时才收）。
+     * 扫码登录授权成功（code 803）那次响应带的 MUSIC_U 就是从这里取的。
+     */
+    nm::NmCookieStore *m_cookieStore;
+    /*! 当前这轮扫码登录的 key（拼进登录 URL、也用于轮询） */
+    QString m_qrKey;
+    /*! 见 qrStatus 属性：0 空闲 1 取码中 2 待扫码 3 待确认 4 成功 5 过期 6 失败 */
+    int m_qrStatus;
+    /*! 二维码图片（本地生成的 PNG）的 file:// 路径 */
+    QString m_qrImagePath;
+    /*! 见 qrStatusText 属性 */
+    QString m_qrStatusText;
+    /*! 状态轮询定时器（3 秒一次，只在扫码登录页面打开期间跑） */
+    QTimer *m_qrTimer;
 
     /*! 推荐页独立模型（见 recommendSongs 属性） */
     bb::cascades::ArrayDataModel *m_recommendSongs;
