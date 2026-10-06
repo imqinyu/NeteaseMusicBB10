@@ -595,10 +595,13 @@ public:
      */
     /*!
      * 封面图的路径（给多任务视图封面 ImageView 用）。
-     * ★★ 返回的是【共享目录】里的副本路径，不是应用沙箱里的原文件！
-     *   cover 的内容由系统服务渲染，它读不到 /accounts/1000/appdata/...，
-     *   只读得到 /accounts/1000/shared/...（需要 access_shared 权限）。
-     *   读不到时返回 asset:///images/ic_default.png 兜底。
+     * 就是【应用私有沙箱】里缓存原图的路径（NmImageCache 的 nm-img）。
+     *
+     * ★ 不需要拷到共享目录：Active Frame 的 cover 是【应用进程】渲染的，
+     *   私有沙箱里的原图它读得到（真机实测：退后台后直接出真封面）。
+     *   1.0.3 之前拷过一份到 /accounts/1000/shared/documents/nm-cover，
+     *   结果专辑图全进了用户相册，已去掉 —— 详见 cpp 文件顶部那段说明。
+     *   没有封面时返回 asset:///images/ic_default.png 兜底。
      */
     Q_PROPERTY(QString coverImagePath READ coverImagePath NOTIFY coverInfoChanged)
     QString coverImagePath();
@@ -837,6 +840,16 @@ public:
      * 成功拿到播放地址后 playUrlVersion 会变化，QML 侧据此起播。
      */
     Q_INVOKABLE void playIndex(int index);
+
+    /*!
+     * ★ 用【本地音频缓存】顶上：有缓存就设好播放地址并通知起播，返回 true；
+     *   没缓存则什么都不做、返回 false（调用方继续走网络或报错）。
+     *
+     *   用在两个地方，见 cpp 里的说明：
+     *     1) playIndex 开头 —— 命中就直接播本地，【根本不发网络请求】；
+     *     2) 取播放地址失败（无网络 / 无权限）时兜底 —— 有缓存照样能播。
+     */
+    bool playFromAudioCache(qint64 songId);
 
     /*! 下一首 / 上一首（循环）。等价于 playIndex(currentIndex±1)。 */
     Q_INVOKABLE void next();

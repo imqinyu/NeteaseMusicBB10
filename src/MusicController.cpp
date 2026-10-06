@@ -32,6 +32,61 @@
 
 using namespace bb::cascades;
 
+// ============================================================================
+//  旧版本遗留的共享目录封面副本 —— 只做【清理】，不再写入
+//
+//  ★ 现在的封面直接用私有沙箱里的原图
+//    （NmImageCache 用 QDir::homePath()/nm-img，用户看不见，卸载会被清掉）。
+//
+//    1.0.3 之前会把封面拷一份到 /accounts/1000/shared/documents/nm-cover，
+//    当时的理由是"Active Frame 由系统服务渲染，读不到私有沙箱，必须拷"。
+//    【这个理由是错的】—— 真机实测：直接用私有沙箱路径，多任务视图封面
+//    正常显示（日志：thumbnail 之后直接 coverImagePath -> REAL .../nm-img/...）。
+//    当年是把 AppCover.qml 里 maxLineCount 造成的整体加载失败，错判成了
+//    "路径读不到"。
+//
+//    正确的机制：Active Frame 的 cover 是【应用进程】渲染的（Cascades 在
+//    app 里把它画好，系统只是把画好的缩略图拿去显示），所以 app 自己沙箱
+//    里的文件它当然读得到。
+// ============================================================================
+
+/*
+ * 旧版本用过的目录。升级后要清掉：
+ * 不删的话，用户相册里已经出现的那批封面会一直在那儿。
+ *
+ * ★ 它在 shared 下，清它需要 access_shared 权限 —— 那个权限现在【只剩
+ *   这一个用途】。等确认用户都升上来之后，可以连同这段清理代码一起删掉，
+ *   权限也一并去掉。
+ */
+static const char *kLegacySharedCoverDir =
+    "/accounts/1000/shared/documents/nm-cover";
+
+/*
+ * ★ 升级清理：删掉旧版本留在 documents 下的整个目录。
+ *
+ *   里面全是我们的副本（没有用户自己的文件），整目录删掉是安全的。
+ *   留着的话用户相册里那批封面会一直挂着。
+ */
+static void purgeLegacySharedCovers()
+{
+    const QString legacy = QLatin1String(kLegacySharedCoverDir);
+    QDir d(legacy);
+    if (! d.exists())
+        return;
+
+    int removed = 0;
+    foreach (const QFileInfo &info, d.entryInfoList(QDir::Files)) {
+        if (QFile::remove(info.absoluteFilePath()))
+            ++removed;
+    }
+    // rmdir 只对空目录生效，所以必须先删完文件
+    QDir().rmdir(legacy);
+
+    qWarning("MusicController: 已清理旧封面目录 %s（%d 个文件）"
+             " —— 它在 documents 下会被相册索引",
+             qPrintable(legacy), removed);
+}
+
 MusicController::MusicController(QObject *parent)
     : QObject(parent)
     , m_http(new nm::NmHttpClient(this))
@@ -284,6 +339,14 @@ ArrayDataModel *MusicController::songs() const
 
 void MusicController::init()
 {
+    /*
+     * ★ 升级清理：旧版本把封面副本写在 shared/documents 下，那个目录会被
+     *   媒体扫描器索引，专辑图因此出现在用户的相册里。
+     *   这里把旧目录整个删掉 —— 光改新路径清不掉用户相册里已有的那批。
+     *   见 purgeLegacySharedCovers 的说明。
+     */
+    purgeLegacySharedCovers();
+
     m_session->load();
 
     // 读「隐藏 VIP 歌曲」设置（默认关）
@@ -982,53 +1045,9 @@ bool MusicController::coverHasArt()
     return ! coverRealPath().isEmpty();
 }
 
-/*
- * 把一张本地图片复制一份到【共享目录】，返回共享目录里的本地路径（失败给空串）。
- *
- * ★★ 为什么必须这么做（踩了很久）：
- *   多任务视图封面（SceneCover / Active Frame）的内容是由【系统服务】渲染的，
- *   它读不到应用私有沙箱 ——
- *     /accounts/1000/appdata/<app>/data/nm-img/xxxx-s640.jpg
- *   这种路径它读不出来。表现就是：ImageView 拿到这个 file:// 之后什么都不画，
- *   而 asset:///images/ic_default.png 却正常（那是打包进应用包的资源，系统读得到）。
- *   于是"未在播放正常、一播放封面就黑"。
- *
- *   共享目录 /accounts/1000/shared/ 是系统服务访问得到的（需要 access_shared
- *   权限，见 bar-descriptor.xml）。
- *
- * 文件名沿用源文件名（本身是 MD5+尺寸，天然唯一），已复制过就不重复拷。
- */
-static QString sharedCoverFor(const QString &localPath)
-{
-    const QFileInfo src(localPath);
-    if (! src.exists() || src.size() <= 0)
-        return QString();
-
-    const QString dir = QLatin1String("/accounts/1000/shared/documents/nm-cover");
-    QDir d;
-    if (! d.mkpath(dir)) {
-        qWarning("MusicController: cannot create shared cover dir %s", qPrintable(dir));
-        return QString();
-    }
-
-    const QString dst = dir + QLatin1Char('/') + src.fileName();
-    const QFileInfo dstInfo(dst);
-    if (dstInfo.exists() && dstInfo.size() == src.size())
-        return dst;                     // 已经拷过了
-
-    QFile::remove(dst);                 // 大小不一致（或残留）先清掉
-    if (! QFile::copy(localPath, dst)) {
-        qWarning("MusicController: cover copy FAILED src=%s dst=%s",
-                 qPrintable(localPath.right(48)), qPrintable(dst.right(48)));
-        return QString();
-    }
-    qWarning("MusicController: cover copied to shared: %s", qPrintable(dst.right(48)));
-    return dst;
-}
-
 QString MusicController::coverImagePath()
 {
-    // 兜底图：asset:// 是打包进应用包的资源，系统服务读得到，永远不会是黑屏
+    // 兜底图：asset:// 是打包进应用包的资源，任何情况都画得出来，永远不会是黑屏
     static const QString kFallback = QLatin1String("asset:///images/ic_default.png");
 
     const QString real = coverRealPath();
@@ -1046,15 +1065,10 @@ QString MusicController::coverImagePath()
         local = local.mid(7);
 
     /*
-     * 复制到共享目录再交给 ImageView —— 它读不到应用沙箱（见 sharedCoverFor
-     * 上面的说明）。拷不过去就退回兜底图，宁可显示占位也不要一块黑。
+     * 直接用【私有沙箱】里的原图 —— 不需要拷一份到共享目录。
+     * 理由见文件上方"旧版本遗留的共享目录封面副本"那段（真机实测通过）。
      */
-    const QString shared = sharedCoverFor(local);
-    if (shared.isEmpty()) {
-        qWarning("MusicController: cover -> FALLBACK (real=%s)",
-                 qPrintable(real.right(48)));
-        return kFallback;
-    }
+    const QString shown = local;
 
     /*
      * ★★★ 关键一步：【先给占位，再切真图】—— 故意制造一次值变化。
@@ -1079,7 +1093,7 @@ QString MusicController::coverImagePath()
         return kFallback;
     }
 
-    const QString out = QUrl::fromLocalFile(shared).toString();
+    const QString out = QUrl::fromLocalFile(shown).toString();
     if (m_coverDiagPath != out) {
         m_coverDiagPath = out;
         qWarning("MusicController: coverImagePath -> REAL %s", qPrintable(out.right(52)));
@@ -1250,6 +1264,32 @@ void MusicController::loadCommentsForIndex(int index)
     m_api->fetchComments(songId, 30, 0);
 }
 
+bool MusicController::playFromAudioCache(qint64 songId)
+{
+    if (songId <= 0 || ! m_audioCache)
+        return false;
+
+    const QString cached = m_audioCache->pathFor(songId);
+    if (cached.isEmpty())
+        return false;                       // 没缓存，调用方继续走网络
+
+    /*
+     * 命中：直接用本地文件播。
+     *
+     * ★ m_pendingSongUrlId 要放开 —— 不发网络请求了，这个"正在取地址"的
+     *   去重标记不清掉的话，下次再点同一首会被它挡住。
+     */
+    m_playUrl = cached;
+    if (m_pendingSongUrlId == songId)
+        m_pendingSongUrlId = 0;
+    ++m_playUrlVersion;
+    emit playUrlChanged();
+
+    qWarning("MusicController: audio cache HIT (播本地) id=%lld",
+             (long long) songId);
+    return true;
+}
+
 void MusicController::playIndex(int index)
 {
     /*
@@ -1356,6 +1396,21 @@ void MusicController::playIndex(int index)
     if (songId == m_pendingSongUrlId)
         return;
     m_pendingSongUrlId = songId;
+
+    /*
+     * ★★ 先查【本地音频缓存】：命中就直接播本地文件，根本不发网络请求。
+     *
+     *   为什么必须放在发请求【之前】：
+     *     以前只在"拿到网络地址之后"才查缓存，于是无网络时请求直接失败，
+     *     根本走不到查缓存那一步 —— 表现就是用户反馈的
+     *     "明明缓存里有这首歌，一断网就是放不了"。
+     *
+     *   两个好处：
+     *     · 无网络（飞行模式 / 地铁 / 欠费）时照样能放缓存过的歌；
+     *     · 有网时也省一次请求、省流量、起播更快。
+     */
+    if (playFromAudioCache(songId))
+        return;
 
     setLoading(true);
     m_api->fetchSongUrl(songId, m_session->bitrate());
@@ -3969,15 +4024,31 @@ void MusicController::onSongUrlFinished(int requestId, qint64 songId,
                                         const nm::NmParsers::SongUrlParse &result)
 {
     Q_UNUSED(requestId);
-    Q_UNUSED(songId);
+    // songId 现在要用了：取地址失败时靠它查本地缓存（见下面两个分支）
 
+    /*
+     * ★ 取地址失败（典型就是无网络）：先看本地有没有缓存。
+     *   有就照样播缓存里那一份，别急着给用户弹"无法播放"。
+     */
     if (!result.ok) {
+        if (playFromAudioCache(songId)) {
+            finishRequest(QLatin1String("songUrl"), true);
+            return;
+        }
         setError(result.error);
         finishRequest(QLatin1String("songUrl"), false);
         return;
     }
 
     if (!result.url.hasUrl()) {
+        /*
+         * ★ 同上：本地缓存过的歌（播过才存得下来）照样能播 ——
+         *   别因为"现在没权限"就把已经下载好的那份也拦住。
+         */
+        if (playFromAudioCache(songId)) {
+            finishRequest(QLatin1String("songUrl"), true);
+            return;
+        }
         // code -110：未登录或无权限（VIP 曲目）
         QVariantMap detail;
         detail.insert(QLatin1String("code"), result.url.code);

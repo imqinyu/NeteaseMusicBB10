@@ -104,10 +104,18 @@
          缺了这一条时请求会直接失败（表现为网络错误），排查起来很费时间。 -->
     <permission>access_internet</permission>
 
-    <!-- ★★ 共享目录访问权限：多任务视图封面（Active Frame）的内容是由
-         【系统服务】渲染的，它读不到应用私有沙箱（/accounts/1000/appdata/...），
-         只读得到 /accounts/1000/shared/... —— 所以封面要先复制一份到共享目录。
-         缺了这一条时：未在播放（用 asset:// 兜底图）正常，一播放就黑。 -->
+    <!-- ★★ 共享目录访问权限。
+
+         现在【只剩一个用途】：清理旧版本留在
+         /accounts/1000/shared/documents/nm-cover 下的封面副本 ——
+         那个目录会被设备的媒体扫描器索引，导致专辑图出现在用户相册里
+         （见 MusicController::purgeLegacySharedCovers）。清它需要这条权限。
+
+         ★ 封面本身【不需要】拷到共享目录：Active Frame 的 cover 是【应用
+           进程】渲染的，私有沙箱里的原图它读得到（真机实测通过）。
+           1.0.3 之前拷过一份，那次"必须拷贝"的判断是错的。
+
+         等确认用户都升上来之后，这条权限可以连同那段清理代码一起去掉。 -->
     <permission>access_shared</permission>
 
     <!-- ★★ 后台运行权限（音乐 app 必加）。
