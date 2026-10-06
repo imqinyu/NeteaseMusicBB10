@@ -14,7 +14,7 @@ Page {
     Menu.definition: MenuDefinition {
         actions: [
             ActionItem {
-                title: "正在播放"
+                title: qsTr("正在播放") + Retranslate.onLocaleOrLanguageChanged
                 imageSource: "asset:///icons/ic_play_on.png"
                 onTriggered: {
                     music.requestOpenNowPlaying()
@@ -32,7 +32,7 @@ Page {
     objectName: "playlistPage"
 
     titleBar: TitleBar {
-        title: music.listTitle.length > 0 ? music.listTitle : qsTr("曲目")
+        title: music.listTitle.length > 0 ? music.listTitle : qsTr("曲目") + Retranslate.onLocaleOrLanguageChanged
     }
 
     // 供 main.qml 的 pop 处理在销毁本页前清空列表（缓解返回卡顿）。
@@ -41,7 +41,7 @@ Page {
 
     actions: [
         ActionItem {
-            title: qsTr("播放")
+            title: qsTr("播放") + Retranslate.onLocaleOrLanguageChanged
             imageSource: "asset:///icons/ic_play.png"
             ActionBar.placement: ActionBarPlacement.Signature
             onTriggered: {
@@ -51,15 +51,15 @@ Page {
             }
         },
         ActionItem {
-            title: qsTr("收藏")
+            title: qsTr("收藏") + Retranslate.onLocaleOrLanguageChanged
             imageSource: "asset:///icons/ic_favorite.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
-                music.notifyError(qsTr("收藏功能还没接后端"))
+                music.notifyError(qsTr("收藏功能还没接后端") + Retranslate.onLocaleOrLanguageChanged)
             }
         },
         ActionItem {
-            title: qsTr("评论")
+            title: qsTr("评论") + Retranslate.onLocaleOrLanguageChanged
             imageSource: "asset:///icons/ic_chat_multiperson.png"
             ActionBar.placement: ActionBarPlacement.Default
             onTriggered: {
@@ -69,7 +69,7 @@ Page {
             }
         },
         ActionItem {
-            title: qsTr("搜索")
+            title: qsTr("搜索") + Retranslate.onLocaleOrLanguageChanged
             imageSource: "asset:///icons/ic_search.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
@@ -136,9 +136,14 @@ Page {
                     }
                 }
                 Label {
+                    // 专辑显示发行日期、歌单显示创建日期（dateText 由 C++ 格式化成
+                    // 「2025年4月27日」；无日期时为空，表现为直接「48首」）。
                     // ★ 用 songTotal（带 NOTIFY 的属性），不是 songCount()：
                     //   后者是 Q_INVOKABLE，写进绑定只算一次 → 永远"0 首"
-                    text: qsTr("%1 首").arg(music.browseTotal)
+                    text: (music.playlistInfo && music.playlistInfo.dateText
+                           && music.playlistInfo.dateText.length > 0)
+                          ? music.playlistInfo.dateText + "  " + qsTr("%1 首").arg(music.browseTotal)
+                          : qsTr("%1 首").arg(music.browseTotal)
                     textStyle {
                         base: SystemDefaults.TextStyles.SmallText
                         color: ui.palette.textOnPlain
@@ -156,7 +161,7 @@ Page {
             bottomPadding: ui.sdu(1)
             TextField {
                 id: innerSearchField
-                hintText: qsTr("在当前列表里过滤")
+                hintText: qsTr("在当前列表里过滤") + Retranslate.onLocaleOrLanguageChanged
                 input {
                     submitKey: SubmitKey.Search
                 }
@@ -181,7 +186,7 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
             }
             Label {
-                text: qsTr("正在加载…")
+                text: qsTr("正在加载…") + Retranslate.onLocaleOrLanguageChanged
                 verticalAlignment: VerticalAlignment.Center
                 textStyle {
                     base: SystemDefaults.TextStyles.SmallText
@@ -196,7 +201,7 @@ Page {
             rightPadding: ui.sdu(2)
             topPadding: ui.sdu(4)
             Label {
-                text: qsTr("这个列表是空的")
+                text: qsTr("这个列表是空的") + Retranslate.onLocaleOrLanguageChanged
                 textStyle {
                     base: SystemDefaults.TextStyles.BodyText
                     color: ui.palette.textOnPlain
@@ -231,7 +236,7 @@ Page {
                                 subtitle: ListItemData.artistsText
                                 actions: [
                                     ActionItem {
-                                        title: qsTr("播放")
+                                        title: qsTr("播放") + Retranslate.onLocaleOrLanguageChanged
                                         onTriggered: {
                                             songItem.ListItem.view.controller.playBrowseSong(songItem.ListItem.indexPath[0])
                                         }
@@ -240,18 +245,18 @@ Page {
                                     ActionItem {
                                         
                                         // 把这首歌插到当前曲目的下一位（见 MusicController::playNextSong）
-                                        title: qsTr("下一首播放")
+                                        title: qsTr("下一首播放") + Retranslate.onLocaleOrLanguageChanged
                                         onTriggered: {
                                             var c = songItem.ListItem.view.controller
                                             var ok = c.playNextSong(ListItemData)
                                             c.notifyError(ok
                                                           ? qsTr("已加入下一首：%1").arg(ListItemData.name)
-                                                          : qsTr("这首歌已经在下一首了"))
+                                                          : qsTr("这首歌已经在下一首了") + Retranslate.onLocaleOrLanguageChanged)
                                         }
                                         imageSource: "asset:///icons/ic_add_to_play_next.png"
                                     },
                                     ActionItem {
-                                        title: qsTr("查看评论")
+                                        title: qsTr("查看评论") + Retranslate.onLocaleOrLanguageChanged
                                         onTriggered: {
                                             songItem.ListItem.view.controller.requestCommentsForBrowseIndex(songItem.ListItem.indexPath[0])
                                         }
@@ -259,7 +264,7 @@ Page {
                                     },
                                     ActionItem {
                                         
-                                        title: qsTr("播放 MV")
+                                        title: qsTr("播放 MV") + Retranslate.onLocaleOrLanguageChanged
                                         enabled: ListItemData.hasMv === true
                                         onTriggered: {
                                             songItem.ListItem.view.controller.openMv(
@@ -271,7 +276,7 @@ Page {
                                     },
                                     ActionItem {
                                         // 音乐详情（Properties）：看这一首的信息 / 歌词
-                                        title: qsTr("音乐详情")
+                                        title: qsTr("音乐详情") + Retranslate.onLocaleOrLanguageChanged
                                         onTriggered: {
                                             songItem.ListItem.view.controller.requestOpenPropertiesFor(ListItemData)
                                         }

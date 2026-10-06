@@ -65,10 +65,17 @@ struct NmPlaylistInfo
     QString description;
     int trackCount;
     int playCount;
+    /*!
+     * 发行 / 创建日期（毫秒时间戳）。
+     * 专辑填 album.publishTime，歌单填 playlist.createTime；
+     * 其它的（搜索结果 / 艺人页 / 每日推荐）留 0，表示不显示日期。
+     */
+    qint64 date;
 
     NmPlaylistInfo()
         : trackCount(0)
         , playCount(0)
+        , date(0)
     {
     }
 

@@ -1,6 +1,7 @@
 #include "model/NmItems.hpp"
 
 #include <QLatin1String>
+#include <QDateTime>
 
 namespace nm {
 
@@ -36,6 +37,25 @@ QVariantMap NmSong::toVariantMap() const
     return map;
 }
 
+namespace {
+/*!
+ * 把毫秒时间戳格式化成「2025年4月27日」这种中文日期；
+ * 0 / 非法值返回空串（调用方据此决定是否显示日期）。
+ */
+QString formatPlaylistDate(qint64 ms)
+{
+    if (ms <= 0)
+        return QString();
+    // 兼容个别接口返回秒级时间戳的情况
+    if (ms < 100000000000LL)
+        ms *= 1000;
+    const QDateTime dt = QDateTime::fromMSecsSinceEpoch(ms);
+    if (!dt.isValid())
+        return QString();
+    return dt.toString(QLatin1String("yyyy年M月d日"));
+}
+}
+
 QVariantMap NmPlaylistInfo::toVariantMap() const
 {
     QVariantMap map;
@@ -46,6 +66,7 @@ QVariantMap NmPlaylistInfo::toVariantMap() const
     map.insert(QLatin1String("description"), description);
     map.insert(QLatin1String("trackCount"), trackCount);
     map.insert(QLatin1String("playCount"), playCount);
+    map.insert(QLatin1String("dateText"), formatPlaylistDate(date));
     return map;
 }
 
