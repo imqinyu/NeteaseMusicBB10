@@ -189,6 +189,7 @@ MusicController::MusicController(QObject *parent)
     // ★ 不走初始化列表：插进列表里要同步改 hpp 的成员顺序，容易踩
     //   -Wreorder，这里直接赋值更省事
     m_advanceHandled = false;
+    m_lyricSongId = 0;
 
     // 轻提示固定在【屏幕底部】（默认在正中，会挡住封面和时间条）
     m_toast->setPosition(bb::system::SystemUiPosition::BottomCenter);
@@ -1364,7 +1365,15 @@ void MusicController::playIndex(int index)
                 emit currentLyricTransChanged();
                 emit coverInfoChanged();
             }
-            m_api->fetchLyric(sid);
+
+            /*
+             * ★ 先查【本地歌词缓存】：命中就直接用，不发请求 ——
+             *   省流量，而且无网络时照样有歌词（用户反馈要的就是这个）。
+             *   没缓存才去问服务器，回来在 onLyricFinished 里存一份。
+             */
+            m_lyricSongId = sid;
+            if (! applyLyricFromCache(sid))
+                m_api->fetchLyric(sid);
         }
     }
 
@@ -3185,6 +3194,134 @@ static bool shouldDropLyricLine(const QString &text, int msec, int lineIndex)
     return false;
 }
 
+/*
+ * 歌词缓存目录（应用私有沙箱，卸载会清掉）。
+ * 歌词是几 KB 的纯文本，缓存代价几乎为零。
+ */
+static QString lyricCacheDir()
+{
+    const QString d = QDir::homePath() + QLatin1String("/nm-lyric");
+    QDir().mkpath(d);
+    return d;
+}
+
+/*
+ * 歌词缓存上限（按 .lrc 文件数算）。
+ * 一首歌词几 KB，3000 首也就十几 MB，正常听歌量远远到不了；
+ * 加这个上限只是防止长年累月无限堆积。
+ */
+static const int kMaxLyricFiles = 3000;
+
+/*
+ * 超出上限就删最旧的（QDir::Time 新→旧，Reversed 之后最旧的排最前）。
+ * 翻译那份（.tr）跟着 .lrc 一起删，别留下孤儿文件。
+ */
+static void trimLyricCache()
+{
+    QDir d(lyricCacheDir());
+    const QFileInfoList files =
+        d.entryInfoList(QStringList() << QLatin1String("*.lrc"),
+                        QDir::Files, QDir::Time | QDir::Reversed);
+
+    const int excess = files.size() - kMaxLyricFiles;
+    if (excess <= 0)
+        return;
+
+    for (int i = 0; i < excess; ++i) {
+        const QString p = files.at(i).absoluteFilePath();
+        QFile::remove(p);
+        // ".lrc" 是 4 个字符
+        QFile::remove(p.left(p.length() - 4) + QLatin1String(".tr"));
+    }
+    qWarning("MusicController: 歌词缓存超上限，清掉 %d 份最旧的", excess);
+}
+
+void MusicController::saveLyricToCache(qint64 songId, const QString &lyric,
+                                       const QString &trans)
+{
+    if (songId <= 0 || lyric.isEmpty())
+        return;
+
+    const QString base = lyricCacheDir() + QLatin1Char('/')
+                         + QString::number(songId);
+
+    QFile f(base + QLatin1String(".lrc"));
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write(lyric.toUtf8());
+        f.close();
+    }
+
+    if (trans.isEmpty()) {
+        // 这首本来就没翻译：把可能残留的旧 .tr 清掉，免得下次读到旧版本
+        QFile::remove(base + QLatin1String(".tr"));
+    } else {
+        QFile t(base + QLatin1String(".tr"));
+        if (t.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            t.write(trans.toUtf8());
+            t.close();
+        }
+    }
+
+    trimLyricCache();
+}
+
+bool MusicController::loadLyricFromCache(qint64 songId, QString *lyric,
+                                         QString *trans) const
+{
+    if (songId <= 0 || !lyric || !trans)
+        return false;
+
+    const QString base = lyricCacheDir() + QLatin1Char('/')
+                         + QString::number(songId);
+
+    QFile f(base + QLatin1String(".lrc"));
+    if (! f.open(QIODevice::ReadOnly))
+        return false;
+    const QByteArray raw = f.readAll();
+    f.close();
+    if (raw.isEmpty())
+        return false;
+
+    *lyric = QString::fromUtf8(raw);
+
+    QFile t(base + QLatin1String(".tr"));
+    if (t.open(QIODevice::ReadOnly))
+        *trans = QString::fromUtf8(t.readAll());
+    else
+        trans->clear();
+
+    return true;
+}
+
+bool MusicController::applyLyricFromCache(qint64 songId)
+{
+    if (songId <= 0)
+        return false;
+
+    QString lyric;
+    QString trans;
+    if (! loadLyricFromCache(songId, &lyric, &trans))
+        return false;
+
+    /*
+     * ★ 命中后【复用 onLyricFinished 的解析逻辑】：
+     *   构造一份 ok 的结果再调一次它 —— 缓存命中和网络回来走的是
+     *   【完全相同】的解析，不会出现两条路径显示效果不一致。
+     *   第二次进去 ok=true，不会再递归。
+     */
+    nm::NmParsers::LyricParse cached;
+    cached.ok = true;
+    cached.code = 200;
+    cached.lyric = lyric;
+    cached.trans = trans;
+
+    qWarning("MusicController: lyric cache HIT id=%lld (lrc=%d trans=%d)",
+             (long long) songId, lyric.size(), trans.size());
+
+    onLyricFinished(0, cached);
+    return true;
+}
+
 void MusicController::onLyricFinished(int requestId,
                                       const nm::NmParsers::LyricParse &result)
 {
@@ -3199,8 +3336,15 @@ void MusicController::onLyricFinished(int requestId,
              result.ok ? 1 : 0, result.code,
              result.lyric.size(), result.trans.size());
 
-    if (!result.ok)
+    /*
+     * ★ 接口失败（典型就是无网络）：拿【本地歌词缓存】顶上。
+     *   这样断网时歌词照样能显示，不至于一片空白。
+     *   没缓存的话 applyLyricFromCache 直接返回 false，照旧什么都不显示。
+     */
+    if (!result.ok) {
+        applyLyricFromCache(m_lyricSongId);
         return;
+    }
 
     /*
      * ★★ 分流：这次请求如果是【详情页】替列表里某首歌发的，就只把原文存进
@@ -3214,6 +3358,13 @@ void MusicController::onLyricFinished(int requestId,
         emit propertiesChanged();
         return;
     }
+
+    /*
+     * ★ 存一份到本地：下次无网络（或接口挂了）就走缓存显示。
+     *   放在这里（主分支）是安全的 —— 上面 properties（详情页）那段
+     *   已经 return 了，不会把详情页那首的歌词错存成当前播放这首的。
+     */
+    saveLyricToCache(m_lyricSongId, result.lyric, result.trans);
 
     m_lyricRaw = result.lyric;
     m_transRaw = result.trans;
@@ -4658,6 +4809,11 @@ QString MusicController::cacheInfo() const
              .arg(m_audioCache->fileCount())
              .arg(QString::number(
                       m_audioCache->cacheSizeBytes() / (1024.0 * 1024.0), 'f', 1));
+    // 歌词缓存（几 KB 的纯文本：无网络时靠它把歌词显示出来）
+    lines << QString(QLatin1String("lyric  : %1 files"))
+             .arg(QDir(lyricCacheDir()).entryList(
+                      QStringList() << QLatin1String("*.lrc"), QDir::Files).size());
+
     // 文件数把两份缓存加起来（小图 + 播放页大图），否则会少报一半
     lines << QString(QLatin1String("cached : %1 files"))
                  .arg(m_imageCache->cachedCount()

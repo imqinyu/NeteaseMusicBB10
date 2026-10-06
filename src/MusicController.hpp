@@ -851,6 +851,26 @@ public:
      */
     bool playFromAudioCache(qint64 songId);
 
+    /*!
+     * ★ 歌词落盘缓存（和音频缓存一个思路，目录 nm-lyric）。
+     *
+     *   为什么缓存：用户反馈"无网络时希望能连歌词一起显示"。
+     *   歌词是纯文本、体积很小（几 KB），缓存代价几乎为零。
+     *
+     *   存的是接口返回的【LRC 原文】（原词 / 翻译各一个文件），读出来后走的
+     *   是和网络回来【完全相同】的解析路径，所以显示效果一模一样。
+     */
+    /*! 存一份歌词到缓存（原词非空才存；没有翻译就把旧的 .tr 清掉） */
+    void saveLyricToCache(qint64 songId, const QString &lyric,
+                          const QString &trans);
+    /*! 读缓存；命中返回 true 并填好 lyric / trans */
+    bool loadLyricFromCache(qint64 songId, QString *lyric, QString *trans) const;
+    /*!
+     * 用缓存顶上：命中就解析并生效（走 onLyricFinished 同一套逻辑），返回 true；
+     * 没缓存返回 false。用于起播时先查、以及接口失败时兜底。
+     */
+    bool applyLyricFromCache(qint64 songId);
+
     /*! 下一首 / 上一首（循环）。等价于 playIndex(currentIndex±1)。 */
     Q_INVOKABLE void next();
     Q_INVOKABLE void prev();
@@ -1323,6 +1343,12 @@ private:
     QStringList m_lyricTrans;
     /*! 当前这句歌词的翻译 */
     QString m_currentLyricTrans;
+    /*!
+     * 当前歌词请求对应的 songId。
+     * ★ onLyricFinished 的回调参数里【没有 songId】，而存歌词缓存要用它，
+     *   所以在 playIndex 发请求前记下来（见 saveLyricToCache / applyLyricFromCache）。
+     */
+    qint64 m_lyricSongId;
 
     /*! 推荐页独立模型（见 recommendSongs 属性） */
     bb::cascades::ArrayDataModel *m_recommendSongs;
