@@ -92,6 +92,31 @@ ApplicationUI::ApplicationUI() :
     connect(m_pPlayer, SIGNAL(playbackCompleted()),
             m_pMusic, SLOT(playbackCompleted()));
 
+    /*
+     * ★ 生命周期：进后台（锁屏 / 切到别的应用）/ 回前台。
+     *
+     *   为什么需要：缺 run_when_backgrounded 时，应用一进后台就被 Navigator
+     *   【挂起】—— 声音是 mm-renderer（系统里独立的音频服务）在放，所以锁屏
+     *   后还听得见；但"这首播完了"这个事件（playbackCompleted，走 BPS 投递）
+     *   是发给【我们进程】的，进程被挂起就收不到 —— 表现就是
+     *   「锁屏后一首放完停在那，不切下一首」。
+     *
+     *   权限已经补在 bar-descriptor.xml 里了；这里挂上生命周期事件是为了：
+     *     · thumbnail  只记日志：日志断在这里 = 进程被挂起了，一眼可判；
+     *     · fullscreen 兜底：万一播完事件还是漏了，回到前台补切一次
+     *       （判定很严，见 MusicController::onAppForegrounded，不会乱跳歌）。
+     *
+     *   ★ thumbnail 里绝不能停播放 —— 音乐 app 就是要在后台继续放。
+     */
+    bool okThumb = connect(Application::instance(), SIGNAL(thumbnail()),
+                           m_pMusic, SLOT(onAppThumbnailed()));
+    bool okFull = connect(Application::instance(), SIGNAL(fullscreen()),
+                          m_pMusic, SLOT(onAppForegrounded()));
+    Q_ASSERT(okThumb);
+    Q_ASSERT(okFull);
+    Q_UNUSED(okThumb);
+    Q_UNUSED(okFull);
+
     // 多任务视图的封面（Active Frame）：单独一个 QML，用它自己的
     // QmlDocument 加载（里面的 music / player 是上面注册的 context property）
     QmlDocument *qmlCover = QmlDocument::create("asset:///AppCover.qml").parent(this);

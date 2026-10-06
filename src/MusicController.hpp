@@ -1059,6 +1059,26 @@ private slots:
      */
     void playbackCompleted();
 
+    /*!
+     * 应用被缩到后台（bb::Application::thumbnail）。
+     *
+     * ★ 只做记录 + 日志，不做任何会打断播放的动作 —— 音乐 app 就是要
+     *   在后台继续放。缺 run_when_backgrounded 时进程在这里之后会被挂起，
+     *   日志会停在 thumbnail 不再往下走，这是判断"有没有真的后台运行"
+     *   最直接的一条依据。
+     */
+    void onAppThumbnailed();
+
+    /*!
+     * 应用回到前台（bb::Application::fullscreen）。
+     *
+     * ★ 兜底：如果上一首其实已经播完、但 playbackCompleted 没被处理到
+     *   （典型是进程在后台被挂起期间事件投递不到），在这里补切一次，
+     *   免得用户回到前台看到"停在歌尾、不往下走"。
+     *   判定很严格（见 cpp 里的注释），绝不会对"用户主动暂停/停止"误触发。
+     */
+    void onAppForegrounded();
+
     /*! 播放器 positionChanged 信号回调（真机），更新 playerPosition 通知 QML */
     void onPlayerPositionChanged(unsigned int position);
     /*! 轮询回调：读 position() 兜底（模拟器上 positionChanged 不触发） */
@@ -1221,6 +1241,18 @@ private:
     nm::NmImageCache *m_bigImageCache;
     /*! applicationui 注入的全局播放器（seek 用，可为 0） */
     bb::multimedia::MediaPlayer *m_mediaPlayer;
+
+    /*!
+     * 本次"播完"是否已经被处理过（见 onAppForegrounded）。
+     *
+     *   false = 当前这首还没播完（或播完了但 playbackCompleted 没处理到）
+     *   true  = playbackCompleted 已经进来过、已经安排了下一首
+     *
+     * ★ 这是兜底补切能不能安全触发的关键：只有 false（说明真没收到过
+     *   playbackCompleted）时才允许补切，避免正常切歌途中被误判成"卡住"
+     *   而连跳两首。起播新曲目（playIndex）时清回 false。
+     */
+    bool m_advanceHandled;
 
     /*! 列表快照（见 snapshotList / restoreList） */
     QVariantList m_snapshotSongs;

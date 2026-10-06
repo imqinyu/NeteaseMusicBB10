@@ -131,6 +131,10 @@ MusicController::MusicController(QObject *parent)
     , m_toast(new bb::system::SystemToast(this))
     , m_openRequestTimer(new QTimer(this))
 {
+    // ★ 不走初始化列表：插进列表里要同步改 hpp 的成员顺序，容易踩
+    //   -Wreorder，这里直接赋值更省事
+    m_advanceHandled = false;
+
     // 轻提示固定在【屏幕底部】（默认在正中，会挡住封面和时间条）
     m_toast->setPosition(bb::system::SystemUiPosition::BottomCenter);
 
@@ -1265,6 +1269,12 @@ void MusicController::playIndex(int index)
     // 立刻更新「正在播放」的显示（地址稍后异步到达）
     m_currentIndex = index;
     m_currentTrack = song;
+    /*
+     * ★ 起播一首新的 → 清掉"播完已处理"标志。
+     *   后面这首歌播完、playbackCompleted 进来时会再置回 true
+     *   （见 onAppForegrounded 的兜底判定）。
+     */
+    m_advanceHandled = false;
     // ★ 换歌：封面回到"先占位、再切真图"的第一步（见 coverImagePath 的说明）
     m_coverReady = false;
     /*
@@ -4379,6 +4389,19 @@ void MusicController::playbackCompleted()
     if (songCount() <= 0)
         return;
 
+    /*
+     * ★ 标记"这次播完已经被处理到了"。
+     *
+     *   后台/锁屏期间如果进程被挂起，这个信号根本进不来，标志就一直是 false，
+     *   回到前台时 onAppForegrounded 据此补切一次（见那里的说明）。
+     *
+     *   日志是排查"后台到底有没有收到播完事件"最直接的依据：
+     *   锁屏放完一首再看日志，有这行 = 事件收到了，没有 = 进程被挂起了。
+     */
+    m_advanceHandled = true;
+    qWarning("[PLAY] playbackCompleted repeat=%d index=%d/%d",
+             m_repeatMode, m_currentIndex, songCount());
+
     switch (m_repeatMode) {
     case 2: // 单曲循环：从头重播当前
         if (m_mediaPlayer) {
@@ -4391,6 +4414,64 @@ void MusicController::playbackCompleted()
         next();
         break;
     }
+}
+
+void MusicController::onAppThumbnailed()
+{
+    /*
+     * 进后台。这里【什么都不做】—— 音乐 app 本来就该继续放。
+     *
+     * 只留一条日志，它是排查生命周期最省事的依据：
+     *   · 能看到这行、并且之后播完还有 [PLAY] playbackCompleted
+     *     → 后台运行正常（run_when_backgrounded 生效）
+     *   · 看到这行之后日志就断了、直到回到前台才继续
+     *     → 进程被挂起了，播完事件收不到（就是"锁屏不切歌"）
+     */
+    qWarning("[LIFE] thumbnail (进后台) advanceHandled=%d",
+             m_advanceHandled ? 1 : 0);
+}
+
+void MusicController::onAppForegrounded()
+{
+    qWarning("[LIFE] fullscreen (回前台) advanceHandled=%d",
+             m_advanceHandled ? 1 : 0);
+
+    if (!m_mediaPlayer || songCount() <= 0)
+        return;
+
+    /*
+     * ★ 兜底补切：下面三个条件要【同时】满足，才算"播完了却没往下走"。
+     *   每条都是为了防止误触发，缺一条就可能正常播放时乱跳歌。
+     *
+     *   1) 这次播完【没被处理过】（m_advanceHandled == false）
+     *      正常的切歌流程里 playbackCompleted 会先把它置 true，所以正常
+     *      情况下这里第一个条件就 return 了 —— 不会连跳两首。
+     *
+     *   2) 播放器已经停了（MediaState::Stopped）
+     *      还在放（Started）或用户暂停（Paused）都不算。
+     *      ★ 注意 MediaState 只有 Unprepared/Prepared/Started/Paused/Stopped
+     *        五个值，【没有 Completed】，播完就是 Stopped。
+     *
+     *   3) 播放位置已经走到接近结尾
+     *      用户主动 stop / 切歌时位置会被重置，不会停在结尾，
+     *      所以"用户自己停的"不会被误判成播完。
+     */
+    if (m_advanceHandled)
+        return;
+    if (m_mediaPlayer->mediaState() != bb::multimedia::MediaState::Stopped)
+        return;
+
+    const unsigned int dur = m_mediaPlayer->duration();
+    const unsigned int pos = m_mediaPlayer->position();
+    if (dur == 0 || pos + 1000 < dur)
+        return;
+
+    qWarning("[PLAY] 回到前台发现已播完但未切歌 (pos=%u dur=%u)，补切一次",
+             pos, dur);
+
+    // 先置位再切，避免补切过程中状态没更新导致重复进来
+    m_advanceHandled = true;
+    playbackCompleted();
 }
 
 void MusicController::loadMvList(const QString &kind)

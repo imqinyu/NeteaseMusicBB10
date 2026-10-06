@@ -51,7 +51,7 @@
     <!-- A string value of the format <0-999>.<0-999>.<0-999> that represents application version which can be used to check for application upgrade.
          Values can also be 1-part or 2-part. It is not necessary to have a 3-part value.
          An updated version of application must have a versionNumber value higher than the previous version. Required. -->
-    <versionNumber>1.0.2</versionNumber>
+    <versionNumber>1.0.3</versionNumber>
 
     <!-- Fourth digit segment of the package version. First three segments are taken from the
          <versionNumber> element.  Must be an integer from 0 to 2^16-1 -->
@@ -109,6 +109,26 @@
          只读得到 /accounts/1000/shared/... —— 所以封面要先复制一份到共享目录。
          缺了这一条时：未在播放（用 asset:// 兜底图）正常，一播放就黑。 -->
     <permission>access_shared</permission>
+
+    <!-- ★★ 后台运行权限（音乐 app 必加）。
+
+         没有这一条时，应用一旦进入后台（锁屏、切到别的应用、回到多任务视图），
+         Navigator 会把整个进程【挂起（suspend）】—— 所有线程停摆，Qt 事件
+         循环不再转。
+
+         表现是一个很迷惑人的现象：
+             · 锁屏后音乐【还在响】
+             · 但一首放完就【停在那，不切下一首】
+         原因在于：声音是 mm-renderer（系统里独立的音频服务进程）在解码输出，
+         我们进程被挂起了它照样在放；可"这首歌播完了"这个事件
+         （MediaPlayer 的 playbackCompleted，走 BPS 事件投递）是发给【我们进程】
+         的 —— 进程被挂起就收不到，自动切歌自然不会发生。
+
+         加上这一条之后进程在后台继续运行，playbackCompleted 能正常收到。
+         所有官方要在后台继续干活的样例（AudioAccessory / VideoPlayerSample /
+         SensorDemo…）都声明了它。
+    -->
+    <permission>run_when_backgrounded</permission>
 
     <env var="LD_LIBRARY_PATH" value="app/native/lib:/usr/lib/qt4/lib"/>
     <!-- 主题：default = 跟随系统（真机设了暗色就是暗色，模拟器默认亮色）。
