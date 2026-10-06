@@ -64,6 +64,7 @@ Device-Debug:
 
 Device-Release:
 	$(call BUILD_IN,arm/o.le-v7,$(SPEC_DEVICE),release,device)
+	@powershell -NoProfile -ExecutionPolicy Bypass -File build/fix-release-artifact.ps1
 	@echo "=== [Device-Release] artifact: arm/o.le-v7/NeteaseMusic.so ==="
 
 Device-Profile:
