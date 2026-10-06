@@ -147,8 +147,6 @@ NmParsers::PlaylistParse NmParsers::parsePlaylist(const NmJson &root)
     out.info.description = pl.member(QLatin1String("description")).toString();
     out.info.trackCount = (int)pl.member(QLatin1String("trackCount")).toLongLong();
     out.info.playCount = (int)pl.member(QLatin1String("playCount")).toLongLong();
-    // 歌单：创建日期
-    out.info.date = pl.member(QLatin1String("createTime")).toLongLong();
     out.info.creatorName =
         pl.member(QLatin1String("creator")).member(QLatin1String("nickname")).toString();
 
@@ -192,8 +190,6 @@ NmParsers::PlaylistParse NmParsers::parseAlbum(const NmJson &root)
     out.info.id = album.member(QLatin1String("id")).toString();
     out.info.name = album.member(QLatin1String("name")).toString();
     out.info.coverUrl = album.member(QLatin1String("picUrl")).toString();
-    // 专辑：发行日期
-    out.info.date = album.member(QLatin1String("publishTime")).toLongLong();
     out.info.creatorName =
         album.member(QLatin1String("artist")).member(QLatin1String("name")).toString();
 
@@ -656,16 +652,7 @@ NmParsers::QrKeyParse NmParsers::parseQrKey(const NmJson &root)
      * 响应形如 {"code":200,"unikey":"9f8a..."}
      * 拿到 key 后拼成登录 URL：http://music.163.com/login?codekey=<unikey>
      */
-    /*
-     * 两套接口的响应结构不一样：
-     *   新版 /login/qr/key   → {"code":200,"data":{"unikey":"..."}}
-     *   老版 /api/login/qrcode/unikey → {"code":200,"unikey":"..."}
-     * 先按新版取，取不到再退回根上取。
-     */
-    out.unikey = root.member(QLatin1String("data"))
-                     .member(QLatin1String("unikey")).toString();
-    if (out.unikey.isEmpty())
-        out.unikey = root.member(QLatin1String("unikey")).toString();
+    out.unikey = root.member(QLatin1String("unikey")).toString();
 
     out.ok = true;
     return out;
@@ -686,8 +673,6 @@ NmParsers::QrStatusParse NmParsers::parseQrStatus(const NmJson &root)
      *   NmHttpClient 里统一收的，不归这里管。
      */
     out.code = (int)root.member(QLatin1String("code")).toLongLong(0);
-    // 排查用：状态码含义不明时，服务端的提示文字往往直接说明原因
-    out.message = root.member(QLatin1String("message")).toString();
 
     out.ok = true;
     return out;
