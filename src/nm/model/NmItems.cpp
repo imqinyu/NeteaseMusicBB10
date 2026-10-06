@@ -52,7 +52,9 @@ QString formatPlaylistDate(qint64 ms)
     const QDateTime dt = QDateTime::fromMSecsSinceEpoch(ms);
     if (!dt.isValid())
         return QString();
-    return dt.toString(QLatin1String("yyyy年M月d日"));
+    // ★ 必须 fromUtf8：QLatin1String 会把「年/月/日」的 UTF-8 字节按 Latin-1
+    //   解释，格式化出来就是 "2021å¹´11æœˆ3æ—¥" 这种乱码。
+    return dt.toString(QString::fromUtf8("yyyy年M月d日"));
 }
 }
 

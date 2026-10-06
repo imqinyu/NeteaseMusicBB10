@@ -147,6 +147,8 @@ NmParsers::PlaylistParse NmParsers::parsePlaylist(const NmJson &root)
     out.info.description = pl.member(QLatin1String("description")).toString();
     out.info.trackCount = (int)pl.member(QLatin1String("trackCount")).toLongLong();
     out.info.playCount = (int)pl.member(QLatin1String("playCount")).toLongLong();
+    // 歌单：创建日期
+    out.info.date = pl.member(QLatin1String("createTime")).toLongLong();
     out.info.creatorName =
         pl.member(QLatin1String("creator")).member(QLatin1String("nickname")).toString();
 
@@ -190,6 +192,8 @@ NmParsers::PlaylistParse NmParsers::parseAlbum(const NmJson &root)
     out.info.id = album.member(QLatin1String("id")).toString();
     out.info.name = album.member(QLatin1String("name")).toString();
     out.info.coverUrl = album.member(QLatin1String("picUrl")).toString();
+    // 专辑：发行日期
+    out.info.date = album.member(QLatin1String("publishTime")).toLongLong();
     out.info.creatorName =
         album.member(QLatin1String("artist")).member(QLatin1String("name")).toString();
 

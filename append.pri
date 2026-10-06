@@ -76,7 +76,12 @@ message(NeteaseMusic: append.pri added $$size(NM_ADDED_SOURCES) source(s); total
 #        改名成 .cpp 走 C++ 编译器即可 —— qrcodegen.h 里已经有
 #        extern "C" 包裹，链接符号不受影响。
 # ---------------------------------------------------------------------------
-SOURCES += $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.cpp)
+# ★ config.pri 是 Momentics IDE 自动生成的，刷新项目后它也会把 qrcodegen.cpp
+#   写进 SOURCES。这里必须先判重再追加，否则 SOURCES 出现两份 → 链接时报
+#   multiple definition of `qrcodegen_*`。contains() 是未锚定的整串正则匹配。
+!contains(SOURCES, .*qrcodegen.*) {
+    SOURCES += $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.cpp)
+}
 
 # ---------------------------------------------------------------------------
 # 2) 头文件搜索路径：代码里用 #include "net/NmHttpClient.hpp" 这种相对
