@@ -1,5 +1,5 @@
 1
-75
+76
 1440x1440/AppCover.qml
 720x720/AppCover.qml
 AboutPage.qml
@@ -41,6 +41,7 @@ icons/ic_pause.png
 icons/ic_play.png
 icons/ic_playlist_audio.png
 icons/ic_play_on.png
+icons/ic_properties.png
 icons/ic_reload.png
 icons/ic_remove_friend.png
 icons/ic_repeat.png

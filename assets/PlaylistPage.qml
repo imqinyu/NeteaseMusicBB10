@@ -280,7 +280,7 @@ Page {
                                         onTriggered: {
                                             songItem.ListItem.view.controller.requestOpenPropertiesFor(ListItemData)
                                         }
-                                        imageSource: "asset:///icons/ic_info.png"
+                                        imageSource: "asset:///icons/ic_properties.png"
                                     }
                                 ]
                             }

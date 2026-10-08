@@ -30,7 +30,7 @@ Page {
              */
             //音乐详情不能挤占音乐控制的位置！老老实实放overflow就行 黑莓官方就是这么干得
             title: qsTr("音乐详情")
-            imageSource: "asset:///icons/ic_info.png"
+            imageSource: "asset:///icons/ic_properties.png"
             ActionBar.placement: ActionBarPlacement.InOverflow
             enabled: nowPlayingPage.hasTrack
             onTriggered: {

@@ -91,6 +91,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/icons/ic_play.png) \
         $$quote($$BASEDIR/assets/icons/ic_play_on.png) \
         $$quote($$BASEDIR/assets/icons/ic_playlist_audio.png) \
+        $$quote($$BASEDIR/assets/icons/ic_properties.png) \
         $$quote($$BASEDIR/assets/icons/ic_reload.png) \
         $$quote($$BASEDIR/assets/icons/ic_remove_friend.png) \
         $$quote($$BASEDIR/assets/icons/ic_repeat.png) \

@@ -448,20 +448,20 @@ TabbedPane {
                                 type: "item"
                                 Container {
                                     id: plItem
-                                    contextActions: [
-                                        ActionSet {
-                                            title: ListItemData.name
-                                            subtitle: qsTr("%1 首").arg(ListItemData.trackCount)
-                                            actions: [
-                                                ActionItem {
-                                                    title: qsTr("加载歌单")
-                                                    onTriggered: {
-                                                        plItem.ListItem.view.controller.loadPlaylist(plItem.ListItem.data.id)
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
+//                                    contextActions: [
+//                                        ActionSet {
+//                                            title: ListItemData.name
+//                                            subtitle: qsTr("%1 首").arg(ListItemData.trackCount)
+//                                            actions: [
+//                                                ActionItem {
+//                                                    title: qsTr("加载歌单")
+//                                                    onTriggered: {
+//                                                        plItem.ListItem.view.controller.loadPlaylist(plItem.ListItem.data.id)
+//                                                    }
+//                                                }
+//                                            ]
+//                                        }
+//                                    ]
                                     PlaylistListItem {
                                         title: ListItemData.name
                                         subtitle: qsTr("%1 首").arg(ListItemData.trackCount)
@@ -802,7 +802,7 @@ TabbedPane {
                                                     onTriggered: {
                                                         dsong.ListItem.view.controller.requestOpenPropertiesFor(ListItemData)
                                                     }
-                                                    imageSource: "asset:///icons/ic_info.png"
+                                                    imageSource: "asset:///icons/ic_properties.png"
                                                 }
                                             ]
                                         }
@@ -1037,7 +1037,7 @@ TabbedPane {
                                                         onTriggered: {
                                                             asRow.ListItem.view.controller.requestOpenPropertiesFor(ListItemData)
                                                         }
-                                                        imageSource: "asset:///icons/ic_info.png"
+                                                        imageSource: "asset:///icons/ic_properties.png"
                                                     },
                                                     ActionItem {
                                                         title: qsTr("查看评论")
@@ -1239,7 +1239,7 @@ TabbedPane {
                             selected: true
                         }
                         Option {
-                            text: qsTr("艺人")
+                            text: qsTr("关注")
                             value: "artists"
                         }
                     }

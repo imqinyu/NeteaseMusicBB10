@@ -220,34 +220,35 @@ Page {
             }
 
             // ================= 调试 =================
-            Header {
-                title: qsTr("调试")
-            }
-            Container {
-                topPadding: 5.0
-                bottomPadding: 5.0
-                rightPadding: 15.0
-                leftPadding: 15.0
-                layout: StackLayout {
-                    orientation: LayoutOrientation.LeftToRight
-                }
-                Label {
-                    text: qsTr("输出控制台日志")
-                    verticalAlignment: VerticalAlignment.Center
-                    layoutProperties: StackLayoutProperties {
-                        spaceQuota: 1
-                    }
-                    textStyle {
-                        base: SystemDefaults.TextStyles.BodyText
-                    }
-                }
-                ToggleButton {
-                    checked: music.consoleLogEnabled()
-                    onCheckedChanged: {
-                        music.setConsoleLogEnabled(checked)
-                    }
-                }
-            }
+            //开关不起作用
+//            Header {
+//                title: qsTr("调试")
+//            }
+//            Container {
+//                topPadding: 5.0
+//                bottomPadding: 5.0
+//                rightPadding: 15.0
+//                leftPadding: 15.0
+//                layout: StackLayout {
+//                    orientation: LayoutOrientation.LeftToRight
+//                }
+//                Label {
+//                    text: qsTr("输出控制台日志")
+//                    verticalAlignment: VerticalAlignment.Center
+//                    layoutProperties: StackLayoutProperties {
+//                        spaceQuota: 1
+//                    }
+//                    textStyle {
+//                        base: SystemDefaults.TextStyles.BodyText
+//                    }
+//                }
+//                ToggleButton {
+//                    checked: music.consoleLogEnabled()
+//                    onCheckedChanged: {
+//                        music.setConsoleLogEnabled(checked)
+//                    }
+//                }
+//            }
 
             // ================= 音质 =================
             Header {

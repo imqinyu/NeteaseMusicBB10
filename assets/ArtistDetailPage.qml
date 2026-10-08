@@ -214,7 +214,7 @@ Page {
                                         onTriggered: {
                                             artistSongItem.ListItem.view.controller.requestOpenPropertiesFor(ListItemData)
                                         }
-                                        imageSource: "asset:///icons/ic_info.png"
+                                        imageSource: "asset:///icons/ic_properties.png"
                                     },
                                     ActionItem {
                                         // 增加到队列：插到当前曲目之后（MusicController::playNextSong）

@@ -12,15 +12,16 @@ Page {
     /*!
      * 本页自己的输入错误（剪贴板空 / 没填就点完成）。
      * ★ C++ 的 lastLoginError 只报"校验结果"，输入侧的提示留在 QML ——
-     *   C++ 里写中文要走 NmTr 的十六进制，没必要为几句话折腾。
+     * C++ 里写中文要走 NmTr 的十六进制，没必要为几句话折腾。
      */
     property string inputError: ""
-actions: [ActionItem {
+    actions: [
+        ActionItem {
             title: qsTr("完成")
             imageSource: "asset:///icons/ic_add_contact.png"
             ActionBar.placement: ActionBarPlacement.Signature
             // 校验期间灰掉，免得连点反复提交（music.loading 由 login() 打开）
-            enabled: !music.loading
+            enabled: ! music.loading
             onTriggered: {
                 var text = cookieTextArea.text ? cookieTextArea.text.trim() : ""
                 if (text.length === 0) {
@@ -34,14 +35,14 @@ actions: [ActionItem {
             }
 
         },
-ActionItem {
+        ActionItem {
             title: qsTr("粘贴")
             imageSource: "asset:///icons/ic_review_add.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
                 // 读系统剪贴板（text/plain）。返回空串 = 剪贴板里没有文本
                 var text = music.clipboardText()
-                if (!text || text.length === 0) {
+                if (! text || text.length === 0) {
                     loginPage.inputError = qsTr("剪贴板里没有文本：请先在电脑浏览器的开发者工具里复制 MUSIC_U 或整段 Cookie")
                     return
                 }
@@ -50,29 +51,30 @@ ActionItem {
             }
 
         },
-ActionItem {
-            title: qsTr("二维码登录")
-            ActionBar.placement: ActionBarPlacement.OnBar
-            imageSource: "asset:///icons/ic_scan_barcode.png"
-            onTriggered: {
-                // 子页面拿不到 NavigationPane，只能把请求发回 main.qml 推页
-                // （和账号管理页「新增账号」同一套机制）
-                music.requestOpenBarcodeLogin()
-            }
-
-        }]
+//        ActionItem {
+//            title: qsTr("二维码登录")
+//            ActionBar.placement: ActionBarPlacement.OnBar
+//            imageSource: "asset:///icons/ic_scan_barcode.png"
+//            onTriggered: {
+//                // 子页面拿不到 NavigationPane，只能把请求发回 main.qml 推页
+//                // （和账号管理页「新增账号」同一套机制）
+//                music.requestOpenBarcodeLogin()
+//            }
+//
+//        }
+    ]
     // 登录成功后的自动返回放在主页面做（那里才拿得到 NavigationPane；
     // 子页面里存 nav 对象会踩 "Unable to set property"）
 
-//    titleBar: TitleBar {
-//        title: qsTr("登录")
-//        acceptAction: ActionItem {
-//            title: qsTr("登录")
-//            onTriggered: {
-//                music.login(cookieTextArea.text)
-//            }
-//        }
-//    }
+    //    titleBar: TitleBar {
+    //        title: qsTr("登录")
+    //        acceptAction: ActionItem {
+    //            title: qsTr("登录")
+    //            onTriggered: {
+    //                music.login(cookieTextArea.text)
+    //            }
+    //        }
+    //    }
 
     Container {
         topPadding: 20
@@ -83,9 +85,7 @@ ActionItem {
         }
 
         Label {
-            text: qsTr("在电脑浏览器登录 music.163.com 后"
-                       + "\n点击开发者工具 → Application → Cookies "
-                       + "\n复制 MUSIC_U 的值（或整段 Cookie）")
+            text: qsTr("在电脑浏览器登录 music.163.com 后" + "\n点击开发者工具 → Application → Cookies " + "\n复制 MUSIC_U 的值（或整段 Cookie）")
             multiline: true
             textStyle {
                 base: SystemDefaults.TextStyles.BodyText
@@ -125,8 +125,7 @@ ActionItem {
         Label {
             // 本页的输入错误优先，否则显示 C++ 回来的校验结果
             //（"没有从输入中找到 MUSIC_U" / "登录已失效，请重新粘贴"）
-            text: loginPage.inputError.length > 0
-                  ? loginPage.inputError : music.lastLoginError
+            text: loginPage.inputError.length > 0 ? loginPage.inputError : music.lastLoginError
             visible: text.length > 0
             multiline: true
             textStyle {

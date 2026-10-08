@@ -127,12 +127,14 @@ Page {
             onTriggered: {
                 music.notifyError(qsTr("分享还没接后端"))
             }
+            imageSource: "asset:///icons/ic_share.png"
         },
         ActionItem {
             title: qsTr("关注")
             onTriggered: {
                 music.notifyError(qsTr("关注还没接后端"))
             }
+            imageSource: "asset:///icons/ic_add_contact.png"
         }
     ]
 
@@ -235,8 +237,7 @@ Page {
         // ★ 自己的和别人的都显示这一条：
         //     自己：歌单 = 我的歌单，艺人 = 我关注的艺人
         //     别人：歌单 = 他的歌单，艺人 = 说明 + 「音乐人」入口
-        // ★ 注意：SegmentedControl 自己的 visible 在真机上【不生效】
-        //   （实测设了 visible:false 照样显示、还能点），所以别再给它加 visible。
+        
         SegmentedControl {
             id: detailMode
             // 切分段时把头部放回来（否则会一直停在收起状态）

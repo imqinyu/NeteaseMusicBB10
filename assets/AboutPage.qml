@@ -73,14 +73,14 @@ Page {
         }
     }
 
-    actions: [
-        ActionItem {
-            title: qsTr("接口调试日志")
-            imageSource: "asset:///icons/ic_help.png"
-            ActionBar.placement: ActionBarPlacement.OnBar
-            onTriggered: {
-                music.setDebugEnabled(true)
-            }
-        }
-    ]
+//    actions: [
+//        ActionItem {
+//            title: qsTr("接口调试日志")
+//            imageSource: "asset:///icons/ic_help.png"
+//            ActionBar.placement: ActionBarPlacement.OnBar
+//            onTriggered: {
+//                music.setDebugEnabled(true)
+//            }
+//        }
+//    ]
 }
