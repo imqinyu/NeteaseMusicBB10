@@ -700,6 +700,7 @@ public:
 
     /*! MV：取第 index 个 MV 的播放地址（结果进 mvUrl） */
     Q_INVOKABLE void requestMvUrl(int index);
+    Q_INVOKABLE void seekVideo(QObject *mediaPlayer, int msec);
 
     /*!
      * 直接播放某首歌关联的 MV（列表里长按曲目 → "播放 MV"）。
@@ -1470,6 +1471,7 @@ private:
     int m_libraryArtistsVersion;
     QString m_mvUrl;
     int m_mvUrlVersion;
+    int m_mvRequestId;
     QString m_mvName;
     QString m_mvArtist;
 

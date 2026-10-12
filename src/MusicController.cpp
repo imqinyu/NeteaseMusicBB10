@@ -134,6 +134,7 @@ MusicController::MusicController(QObject *parent)
     , m_allSongsMode(false)
     , m_allSongsFetching(false)
     , m_mvUrlVersion(0)
+    , m_mvRequestId(0)
     , m_currentMvId(0)
     , m_propertiesLyricFetching(false)
     , m_propertiesVersion(0)
@@ -4553,7 +4554,9 @@ void MusicController::onMvsFinished(int requestId,
 void MusicController::onMvUrlFinished(int requestId,
                                       const nm::NmParsers::MvUrlParse &result)
 {
-    Q_UNUSED(requestId);
+    if (requestId != m_mvRequestId)
+        return;
+    m_mvRequestId = 0;
 
     if (!result.ok) {
         setError(result.error);
@@ -4561,7 +4564,16 @@ void MusicController::onMvUrlFinished(int requestId,
         return;
     }
 
-    m_mvUrl = result.url;
+    QString playbackUrl = result.url;
+    if (playbackUrl.startsWith(QLatin1String("https://"), Qt::CaseInsensitive))
+        playbackUrl.replace(0, 5, QLatin1String("http"));
+    const QUrl parsed(playbackUrl);
+    if (!parsed.isValid() || parsed.scheme().toLower() != QLatin1String("http") || parsed.host().isEmpty()) {
+        setError(QString::fromUtf8("MV地址无效或不支持HTTP播放"));
+        finishRequest(QLatin1String("mvUrl"), false);
+        return;
+    }
+    m_mvUrl = playbackUrl;
     ++m_mvUrlVersion;
     emit mvUrlChanged();
 
@@ -4569,9 +4581,9 @@ void MusicController::onMvUrlFinished(int requestId,
      * ★ 诊断：MV 播不出来时靠这条判断到底是"没取到地址"还是"地址取到了
      *   但播放器不认"。开「输出控制台日志」后能看到。
      */
-    qWarning("MusicController: mvUrl id=%lld len=%d url=%s",
+    qWarning("MusicController: mvUrl id=%lld len=%d host=%s",
              (long long)result.id, m_mvUrl.size(),
-             qPrintable(m_mvUrl.left(160)));
+             qPrintable(parsed.host()));
 
     finishRequest(QLatin1String("mvUrl"), true);
 }
@@ -4876,7 +4888,8 @@ void MusicController::requestMvUrl(int index)
     m_mvName = map.value(QLatin1String("name")).toString();
     m_mvArtist = map.value(QLatin1String("artistName")).toString();
     setLoading(true);
-    m_api->fetchMvUrl(mvId, 480);
+    m_currentMvId = mvId;
+    m_mvRequestId = m_api->fetchMvUrl(mvId, 480);
 }
 
 void MusicController::openMv(const QString &mvId, const QString &name,
@@ -4893,7 +4906,16 @@ void MusicController::openMv(const QString &mvId, const QString &name,
     m_currentMvId = id;     // ★ 同上：MV 页「评论」分段要用
     setLoading(true);
     // 复用 MV 播放地址接口；拿到后 mvUrlVersion 变化，main.qml 会推播放页
-    m_api->fetchMvUrl(id, 480);
+    m_mvRequestId = m_api->fetchMvUrl(id, 480);
+}
+
+void MusicController::seekVideo(QObject *mediaPlayer, int msec)
+{
+    bb::multimedia::MediaPlayer *video = qobject_cast<bb::multimedia::MediaPlayer*>(mediaPlayer);
+    if (!video || video == m_mediaPlayer || video->duration() == 0)
+        return;
+    const unsigned int target = qMin((unsigned int)qMax(0, msec), video->duration());
+    video->seekTime(target);
 }
 
 void MusicController::requestMvComments()

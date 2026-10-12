@@ -53,8 +53,16 @@ TabbedPane {
     // MV 地址拿到 → 推播放页
     property int mvUrlVersion: music.mvUrlVersion
     onMvUrlVersionChanged: {
-        if (music.mvUrl.length > 0)
-            root.pushPage(mvPlayerPageDef)
+        if (music.mvUrl.length > 0) {
+            var page = root.pushPage(mvPlayerPageDef, function (p) {
+                p.videoTitle = music.mvName
+                p.videoArtist = music.mvArtist
+                p.windowKey = "mvSurfaceWindow-" + music.mvUrlVersion
+                p.videoUrl = music.mvUrl
+            })
+            if (page)
+                page.startPlayback()
+        }
     }
 
     // 登录成功 → 自动退回（栈顶是登录页时）
@@ -152,6 +160,7 @@ TabbedPane {
         Application.menuEnabled = false
         nav.push(page)
         music.trace("pushPage: pushed, top=" + (nav.top ? nav.top.objectName : "null"))
+        return page
     }
 
     function pushSettings() {
@@ -322,6 +331,8 @@ TabbedPane {
                         music.restoreList()
                     if (page.myList)
                         page.myList.dataModel = null
+                    if (page.objectName == "mvPlayerPage")
+                        page.stopPlayback(true)
                     page.destroy()
                 }
                 Application.menuEnabled = true
@@ -614,6 +625,8 @@ TabbedPane {
                         music.restoreList()
                     if (page.myList)
                         page.myList.dataModel = null
+                    if (page.objectName == "mvPlayerPage")
+                        page.stopPlayback(true)
                     page.destroy()
                 }
                 Application.menuEnabled = true
@@ -875,6 +888,8 @@ TabbedPane {
                         music.restoreList()
                     if (page.myList)
                         page.myList.dataModel = null
+                    if (page.objectName == "mvPlayerPage")
+                        page.stopPlayback(true)
                     page.destroy()
                 }
                 Application.menuEnabled = true
@@ -1120,6 +1135,8 @@ TabbedPane {
                         music.restoreList()
                     if (page.myList)
                         page.myList.dataModel = null
+                    if (page.objectName == "mvPlayerPage")
+                        page.stopPlayback(true)
                     page.destroy()
                 }
                 Application.menuEnabled = true

@@ -18,6 +18,8 @@ Container {
 
     property int duration: 1
     property int position: 0
+    property bool externalSeek: false
+    signal seekRequested(int msec)
 
     function fmt(ms) {
         if (ms < 0)
@@ -47,11 +49,17 @@ Container {
                 sliderBar.userSeeking = true
                 // ★ 让 C++ 在拖动期间暂停位置更新（照官方 setSamplingMode）：
                 //   否则位置一动，onPositionChanged 就把滑块拽回去 →「拖不动」
-                music.setSeeking(true)
+                if (!sliderBox.externalSeek)
+                    music.setSeeking(true)
             } else if (event.isUp() || event.isCancel()) {
                 sliderBar.userSeeking = false
-                music.setSeeking(false)
-                music.seekTo(Math.round(sliderBar.immediateValue))
+                if (sliderBox.externalSeek) {
+                    if (event.isUp())
+                        sliderBox.seekRequested(Math.round(sliderBar.immediateValue))
+                } else {
+                    music.setSeeking(false)
+                    music.seekTo(Math.round(sliderBar.immediateValue))
+                }
                 sliderBox.updateLabels()
             }
         }
