@@ -21,10 +21,10 @@
 #include <bb/cascades/Application>
 #include <bb/cascades/QmlDocument>
 #include <bb/cascades/AbstractPane>
-#include <bb/cascades/Container>
 #include <bb/cascades/SceneCover>
-#include <bb/cascades/AbstractCover>
 #include <bb/cascades/MultiCover>
+#include <bb/cascades/Container>
+#include <bb/cascades/LayoutUpdateHandler>
 #include <bb/cascades/LocaleHandler>
 
 #include <bb/multimedia/MediaPlayer>
@@ -32,6 +32,7 @@
 #include <QDeclarativeError>
 #include <QNetworkProxyFactory>
 #include <QTranslator>
+#include <QTimer>
 #include <cstdio>
 
 using namespace bb::cascades;
@@ -41,7 +42,11 @@ ApplicationUI::ApplicationUI() :
         m_pTranslator(0),
         m_pLocaleHandler(0),
         m_pMusic(0),
-        m_pPlayer(0)
+        m_pPlayer(0),
+        m_coverHigh(0),
+        m_coverMedium(0),
+        m_coverPrimeTimer(new QTimer(this)),
+        m_coverInThumbnail(false)
 {
     // 使用系统代理设置（企业网络/运营商环境需要）
     QNetworkProxyFactory::setUseSystemConfiguration(true);
@@ -117,29 +122,12 @@ ApplicationUI::ApplicationUI() :
     Q_UNUSED(okThumb);
     Q_UNUSED(okFull);
 
-    // 多任务视图的封面（Active Frame）：单独一个 QML，用它自己的
-    // QmlDocument 加载（里面的 music / player 是上面注册的 context property）
-    QmlDocument *qmlCover = QmlDocument::create("asset:///AppCover.qml").parent(this);
-    if (qmlCover) {
-        if (qmlCover->hasErrors()) {
-            foreach (const QDeclarativeError &e, qmlCover->errors())
-                fprintf(stderr, "[NeteaseMusic] AppCover.qml error: %s\n", qPrintable(e.toString()));
-
-        } else {
-            qmlCover->setContextProperty("music", m_pMusic);
-            qmlCover->setContextProperty("player", m_pPlayer);
-            /*
-             * ★ 封面现在是 MultiCover（AppCover.qml 里按 CoverDetailLevel
-             *   给不同分辨率机型提供 High / Medium 两档版式）。
-             *   MultiCover 本身就是 AbstractCover，直接交给 setCover 即可，
-             *   不能再按 Container 取根对象再包一层 SceneCover ——
-             *   那样取到的是 null，多任务视图会没有封面。
-             */
-            AbstractCover *cover = qmlCover->createRootObject<AbstractCover>();
-            if (cover)
-                Application::instance()->setCover(cover);
-        }
-    }
+    m_coverPrimeTimer->setSingleShot(true);
+    m_coverPrimeTimer->setInterval(50);
+    connect(m_coverPrimeTimer, SIGNAL(timeout()), this, SLOT(advanceCoverPrime()));
+    connect(Application::instance(), SIGNAL(thumbnail()), this, SLOT(onCoverThumbnailed()));
+    connect(Application::instance(), SIGNAL(fullscreen()), this, SLOT(onCoverHidden()));
+    connect(Application::instance(), SIGNAL(invisible()), this, SLOT(onCoverHidden()));
 
     // Create root object for the UI
     AbstractPane *root = qml->createRootObject<AbstractPane>();
@@ -162,6 +150,200 @@ ApplicationUI::ApplicationUI() :
     // 读取本地登录态。放在 setScene 之后，这样 QML 已经绑定好属性，
     // 能立刻反映登录状态。
     m_pMusic->init();
+    createAppCover();
+}
+
+SceneCover* ApplicationUI::createCoverScene(bool compact)
+{
+    SceneCover *cover = new SceneCover();
+    cover->setObjectName(compact ? "medium" : "high");
+    // Documents stay alive for the whole application lifetime, as do these covers.
+    QmlDocument *document = QmlDocument::create("asset:///AppCover.qml").parent(this);
+    if (!document) {
+        delete cover;
+        return 0;
+    }
+    document->setContextProperty("music", m_pMusic);
+    document->setContextProperty("appCover", cover);
+    Container *content = document->createRootObject<Container>();
+    if (document->hasErrors() || !content) {
+        fprintf(stderr, "[COVER] AppCover.qml load FAILED level=%s\n", compact ? "medium" : "high");
+        foreach (const QDeclarativeError &e, document->errors())
+            fprintf(stderr, "[COVER]   %s\n", qPrintable(e.toString()));
+        fflush(stderr);
+        delete content;
+        delete document;
+        delete cover;
+        return 0;
+    }
+    cover->setContent(content);
+    LayoutUpdateHandler *layout = content->findChild<LayoutUpdateHandler*>("coverRootLayout");
+    if (layout) {
+        layout->setProperty("coverLevel", cover->objectName());
+        const bool connected = connect(layout, SIGNAL(layoutFrameChanged(QRectF)),
+                                       this, SLOT(onCoverLayoutChanged(QRectF)));
+        Q_ASSERT(connected);
+        Q_UNUSED(connected);
+    } else {
+        fprintf(stderr, "[COVER] missing coverRootLayout level=%s\n", qPrintable(cover->objectName()));
+    }
+    connect(cover, SIGNAL(sizeChanged(QSize)), this, SLOT(onCoverSizeChanged(QSize)));
+    return cover;
+}
+
+void ApplicationUI::createAppCover()
+{
+    // Follow the SDK Music/Video asset variants: only Passport (1440x1440)
+    // provides Medium. On Z10/10.3.1 the unsupported level gets a 334x0 canvas.
+    // Keep the scene graphs alive so cached images can finish loading in foreground.
+    m_coverHigh = createCoverScene(false);
+    if (!m_coverHigh)
+        return;
+    const bool supportsMedium = m_coverHigh->content()->property("supportsMediumCover").toBool();
+    if (supportsMedium)
+        m_coverMedium = createCoverScene(true);
+    if (supportsMedium && !m_coverMedium) {
+        delete m_coverHigh;
+        delete m_coverMedium;
+        m_coverHigh = m_coverMedium = 0;
+        return;
+    }
+    MultiCover *cover = new MultiCover();
+    m_coverHigh->setParent(cover);
+    cover->add(m_coverHigh, CoverDetailLevel::High);
+    if (m_coverMedium) {
+        m_coverMedium->setParent(cover);
+        cover->add(m_coverMedium, CoverDetailLevel::Medium);
+    }
+    fprintf(stderr, "[COVER] build=passport-layout-v5 installed=high%s\n", supportsMedium ? "+medium" : "");
+    Application::instance()->setCover(cover);
+    logAppCoverSizes();
+}
+
+void ApplicationUI::onCoverSizeChanged(const QSize &size)
+{
+    SceneCover *cover = qobject_cast<SceneCover*>(sender());
+    fprintf(stderr, "[COVER] sizeChanged level=%s size=%dx%d\n",
+            cover ? qPrintable(cover->objectName()) : "unknown", size.width(), size.height());
+    fflush(stderr);
+}
+
+void ApplicationUI::onCoverLayoutChanged(const QRectF &frame)
+{
+    if (frame.width() <= 0 || frame.height() <= 0)
+        return;
+    const QString level = sender()->property("coverLevel").toString();
+    SceneCover *cover = level == QLatin1String("high") ? m_coverHigh : m_coverMedium;
+    if (!cover)
+        return;
+    cover->setProperty("layoutReady", true);
+    scheduleCoverPrime();
+}
+
+void ApplicationUI::onCoverThumbnailed()
+{
+    m_coverInThumbnail = true;
+    logAppCoverSizes();
+    scheduleCoverPrime();
+}
+
+void ApplicationUI::scheduleCoverPrime()
+{
+    if (!m_coverInThumbnail)
+        return;
+    SceneCover *covers[] = { m_coverHigh, m_coverMedium };
+    bool pending = false;
+    for (int i = 0; i < 2; ++i) {
+        SceneCover *cover = covers[i];
+        if (!cover || !cover->property("layoutReady").toBool() || cover->property("primed").toBool())
+            continue;
+        cover->setProperty("primePending", true);
+        pending = true;
+    }
+    // Let the initial layout/render event finish. Never reset an active timer:
+    // subsequent layout events must not postpone restoring a hidden cover.
+    if (pending && !m_coverPrimeTimer->isActive())
+        m_coverPrimeTimer->start();
+}
+
+void ApplicationUI::advanceCoverPrime()
+{
+    if (!m_coverInThumbnail) {
+        onCoverHidden();
+        return;
+    }
+    SceneCover *covers[] = { m_coverHigh, m_coverMedium };
+    bool restorePending = false;
+    for (int i = 0; i < 2; ++i) {
+        SceneCover *cover = covers[i];
+        if (!cover || !cover->property("primePending").toBool())
+            continue;
+        Container *content = qobject_cast<Container*>(cover->content());
+        const bool layoutPulse = content && content->property("supportsMediumCover").toBool();
+        if (!cover->property("priming").toBool()) {
+            cover->setProperty("priming", true);
+            // Passport needs a content/layout update after its first cover frame.
+            // Keep both roots visible: hiding both did not refresh MultiCover there.
+            // One physical pixel changes the child geometry without changing track data.
+            if (layoutPulse)
+                content->setLeftPadding(1.0f);
+            else
+                cover->content()->setVisible(false);
+            restorePending = true;
+            fprintf(stderr, "[COVER] prime %s level=%s\n", layoutPulse ? "inset" : "hide", qPrintable(cover->objectName()));
+        } else {
+            if (layoutPulse)
+                content->resetLeftPadding();
+            else
+                cover->content()->setVisible(true);
+            cover->setProperty("priming", false);
+            cover->setProperty("primePending", false);
+            cover->setProperty("primed", true);
+            fprintf(stderr, "[COVER] prime %s level=%s\n", layoutPulse ? "layout restored" : "show", qPrintable(cover->objectName()));
+        }
+    }
+    fflush(stderr);
+    // Separate hide/show into different event-loop turns: an unchanged NOTIFY or
+    // invisible text character does not create a real visual change in SceneCover.
+    if (restorePending)
+        m_coverPrimeTimer->start();
+}
+
+void ApplicationUI::onCoverHidden()
+{
+    m_coverInThumbnail = false;
+    m_coverPrimeTimer->stop();
+    SceneCover *covers[] = { m_coverHigh, m_coverMedium };
+    for (int i = 0; i < 2; ++i) {
+        SceneCover *cover = covers[i];
+        if (!cover)
+            continue;
+        if (cover->property("priming").toBool()) {
+            Container *content = qobject_cast<Container*>(cover->content());
+            if (content && content->property("supportsMediumCover").toBool())
+                content->resetLeftPadding();
+            cover->content()->setVisible(true);
+            fprintf(stderr, "[COVER] prime cancelled/restored level=%s\n", qPrintable(cover->objectName()));
+        }
+        cover->setProperty("priming", false);
+        cover->setProperty("primePending", false);
+    }
+    fflush(stderr);
+}
+
+void ApplicationUI::logAppCoverSizes()
+{
+    SceneCover *covers[] = { m_coverHigh, m_coverMedium };
+    for (int i = 0; i < 2; ++i) {
+        SceneCover *cover = covers[i];
+        if (!cover)
+            continue;
+        const QSize size = cover->size();
+        fprintf(stderr, "[COVER] thumbnail/setup level=%s size=%dx%d art=%d lyrics=%d\n",
+                qPrintable(cover->objectName()), size.width(), size.height(),
+                m_pMusic->coverHasArt() ? 1 : 0, m_pMusic->property("lyricsEnabled").toBool() ? 1 : 0);
+    }
+    fflush(stderr);
 }
 
 void ApplicationUI::registerQmlTypes()

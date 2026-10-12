@@ -43,7 +43,7 @@ Page {
                 rightPadding: 15.0
                 leftPadding: 15.0
                 Label {
-                    text: qsTr("应用暗色主题")
+                    text: qsTr("暗色主题")
                     verticalAlignment: VerticalAlignment.Center
                     layoutProperties: StackLayoutProperties {
                         spaceQuota: 1
@@ -285,51 +285,60 @@ Page {
             Header {
                 title: qsTr("缓存")
             }
-            DropDown {
-                options: [
-                    Option {
-                        text: "512MB "
-                    
-                    },
-                    Option {
-                        text: "1G"
 
-                    },
-                    Option {
-                        text: "2G"
+            Container {
+                leftPadding: 15.0
+                rightPadding: 15.0
 
-                    },
-                    Option {
-                        text: "3G"
+                topMargin: 5.0
+                bottomMargin: 5.0
+                topPadding: 5.0
+                DropDown {
+                    options: [
+                        Option {
+                            text: "512MB "
 
-                    },
-                    Option {
-                        text: "5G"
+                        },
+                        Option {
+                            text: "1G"
 
-                    }
-                ]
-                title: "音乐缓存上限"
-                /*
-                 * ★ 这里按【下标】映射上限（MB），因为 Option 没写 value：
-                 *     0→512  1→1024  2→2048  3→3072  4→5120
-                 *   进页面时按当前设置选中对应项；改动立刻落盘并按新上限清理。
-                 */
-                onCreationCompleted: {
-                    var limits = [512, 1024, 2048, 3072, 5120]
-                    var cur = music.audioCacheLimit()
-                    for (var i = 0; i < limits.length; i ++) {
-                        if (limits[i] == cur) {
-                            selectedIndex = i
-                            break
+                        },
+                        Option {
+                            text: "2G"
+
+                        },
+                        Option {
+                            text: "3G"
+
+                        },
+                        Option {
+                            text: "5G"
+
+                        }
+                    ]
+                    title: "音乐缓存上限"
+                    /*
+                     * ★ 这里按【下标】映射上限（MB），因为 Option 没写 value：
+                     * 0→512  1→1024  2→2048  3→3072  4→5120
+                     * 进页面时按当前设置选中对应项；改动立刻落盘并按新上限清理。
+                     */
+                    onCreationCompleted: {
+                        var limits = [ 512, 1024, 2048, 3072, 5120 ]
+                        var cur = music.audioCacheLimit()
+                        for (var i = 0; i < limits.length; i ++) {
+                            if (limits[i] == cur) {
+                                selectedIndex = i
+                                break
+                            }
                         }
                     }
-                }
-                onSelectedIndexChanged: {
-                    var limits = [512, 1024, 2048, 3072, 5120]
-                    if (selectedIndex >= 0 && selectedIndex < limits.length)
-                        music.setAudioCacheLimit(limits[selectedIndex])
-                }
+                    onSelectedIndexChanged: {
+                        var limits = [ 512, 1024, 2048, 3072, 5120 ]
+                        if (selectedIndex >= 0 && selectedIndex < limits.length)
+                            music.setAudioCacheLimit(limits[selectedIndex])
+                    }
 
+                }
             }
             Label {
                 id: cacheInfoLabel
@@ -359,13 +368,9 @@ Page {
                 text: qsTr("清除音乐缓存")
                 horizontalAlignment: HorizontalAlignment.Fill
                 onClicked: {
-                    cacheInfoLabel.text = qsTr("已删除 %1 个音乐文件")
-                                          .arg(music.clearAudioCache())
+                    cacheInfoLabel.text = qsTr("已删除 %1 个音乐文件").arg(music.clearAudioCache())
                 }
             }
-
-
-
 
         }
     }

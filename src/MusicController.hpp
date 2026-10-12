@@ -585,24 +585,9 @@ public:
     Q_INVOKABLE QString coverArtPath(const QString &url);
 
     /*!
-     * ★★ 封面（多任务视图 SceneCover）要用的数据，一律在 C++ 侧算好，
-     *    并且【全部是基本类型】（QString / bool）—— 没再用 QVariantMap。
-     *
-     *   为什么不在 QML 里算：SceneCover 的 content 跑在【独立的 QML 上下文】里，
-     *   多行 JS 绑定在那儿求值容易出岔子 —— 一旦异常，整片 content 就渲染不出来，
-     *   表现是多任务视图里【一片黑】。真机反馈：同一首歌、仅仅关掉「歌词显示」，
-     *   封面就全黑（打开就正常），而歌词开关只该影响文本。
-     *
-     *   为什么拆开而不是打包成一个 QVariantMap：map 类型的属性每次求值都会
-     *   返回一个【新对象】，在 cover 那个独立上下文里是可疑的不稳定因素；
-     *   拆成几个 QString / bool 之后就只是最普通的属性读取了。
-     *
-     *   coverImagePath 为空 = 没有封面，QML 那边自己铺一块深色底 + 居中音符。
-     *   ★ 别改成"没封面就给 ic_default.png"：那张图是【深灰底 + 黑音符】，
-     *     AspectFill 铺满之后看着就是一片黑，会被当成 bug（实测踩过）。
-     *
-     *   NOTIFY 统一用 coverInfoChanged：曲目、歌词、翻译、歌词/翻译开关、
-     *   图片缓存任一变化都会发（见各处 emit）。
+     * Active Frame 数据使用 QString / bool 属性。歌词开关仅决定文本内容。
+     * coverInfoChanged 通知曲目、歌词、设置和异步图片缓存的变化；
+     * ApplicationUI 保持大小两档封面实例，按系统分配的 cover size 布局。
      */
     /*!
      * 封面图的路径（给多任务视图封面 ImageView 用）。
@@ -616,28 +601,11 @@ public:
      */
     Q_PROPERTY(QString coverImagePath READ coverImagePath NOTIFY coverInfoChanged)
     QString coverImagePath();
-    /*!
-     * 内部用：真实的封面路径，没有封面时返回【空串】。
-     * ★ coverImagePath 在它为空时会兜一张占位图而不是空串 —— 原因见 cpp 里的说明
-     *   （imageSource 从空变非空的那次赋值，SceneCover 不会重绘）。
-     */
+    /*! 内部用：真实的封面路径，没有可用封面文件时返回空串。 */
     QString coverRealPath();
 
-    /*!
-     * 「封面已经可以换成真图了」—— 见 coverImagePath 里那段说明：
-     * 起播时先把 imageSource 设成 asset:// 占位（保证能渲染），随后再切成
-     * 共享目录里的真封面，用这次【值变化】逼 SceneCover 重绘。
-     * 曲目切换时复位。
-     */
-    bool m_coverReady;
     /*! 诊断用：上一次 coverImagePath 返回的值（变化时才打日志） */
     QString m_coverDiagPath;
-    /*!
-     * 「轻轻推一下」封面的计数器（见 nudgeCover）。
-     * 奇数时 coverTitle 会带一个零宽空格 —— 肉眼不可见、不影响排版，
-     * 但能让值发生变化，从而驱动 SceneCover 重绘一次。
-     */
-    int m_coverNudge;
     Q_PROPERTY(bool coverHasArt READ coverHasArt NOTIFY coverInfoChanged)
     bool coverHasArt();
     Q_PROPERTY(QString coverTitle READ coverTitle NOTIFY coverInfoChanged)
@@ -1107,19 +1075,8 @@ signals:
     void requestFinished(const QString &what, bool success);
 
 private slots:
-    /*!
-     * 曲目变化后延迟再补发一次 coverInfoChanged。
-     * ★ 真机反馈：起播后到歌词到达之间，多任务视图的封面是一块黑，歌词一上来
-     *   就恢复了 —— 说明只是"那一下"没重绘。补一次通知等价于人为制造一次内容
-     *   变化，把这段窗口填上。见 cpp 里的调用点。
-     */
+    /*! 曲目变化后延迟补发通知，让异步封面缓存重新求值。 */
     void notifyCoverAgain();
-    /*!
-     * 起播后隔一会儿"推"封面几次（见 cpp 里的说明）。
-     * ★ 只改一个看不见的零宽空格，用来驱动 SceneCover 的那一次重绘；
-     *   没有它的话，没歌词 / 未在播放这种"静态"状态下封面永远画不出来。
-     */
-    void nudgeCover();
     /*! 搜索防抖：停手 300ms 后才真正发请求（见 search()） */
     void onSearchDebounce();
     /*! 歌词接口回来（见 fetchLyric） */

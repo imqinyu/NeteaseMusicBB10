@@ -138,9 +138,7 @@ MusicController::MusicController(QObject *parent)
     , m_propertiesLyricFetching(false)
     , m_propertiesVersion(0)
     , m_coverEvalCount(0)
-    , m_coverReady(false)
     , m_coverDiagPath()
-    , m_coverNudge(0)
     , m_userLevel(0)
     , m_userPlayCount(0)
     , m_vipType(0)
@@ -197,17 +195,6 @@ MusicController::MusicController(QObject *parent)
 
     // 轻提示固定在【屏幕底部】（默认在正中，会挡住封面和时间条）
     m_toast->setPosition(bb::system::SystemUiPosition::BottomCenter);
-
-    /*
-     * ★★ 启动后"推"封面几次。
-     *   多任务视图封面的【第一次渲染会被吃掉】—— 实测：数据、路径全对，
-     *   但只要处于静态（未在播放、或播放中还没出歌词），封面就是不显示；
-     *   只要内容在变（例如歌词滚动）就正常。所以启动后先推几次，
-     *   把首帧带出来（见 nudgeCover 的说明）。
-     */
-    QTimer::singleShot(1200, this, SLOT(nudgeCover()));
-    QTimer::singleShot(2600, this, SLOT(nudgeCover()));
-    QTimer::singleShot(4200, this, SLOT(nudgeCover()));
 
     // 延迟推页用的定时器：单次，到点才发 openRequestChanged（见 scheduleOpenRequest）
     m_openRequestTimer->setSingleShot(true);
@@ -1174,27 +1161,6 @@ void MusicController::notifyCoverAgain()
     emit coverInfoChanged();
 }
 
-void MusicController::nudgeCover()
-{
-    /*
-     * ★★★ 起播后"轻轻推"封面几次。
-     *
-     *   实测（真机日志 + 用户复现）：数据链路完全正确 ——
-     *     路径对、共享目录对、coverImagePath 也按预期从 PLACEHOLDER 变成 REAL，
-     *   但封面就是不显示；而一旦歌词开始滚动（每句都在变），封面立刻出现。
-     *
-     *   结论：SceneCover 需要【内容层面】的变化才会重绘；单纯改 imageSource
-     *   的值喂不饱它。没歌词的歌、以及未在播放，都没有后续变化，所以封面永远
-     *   画不出来。
-     *
-     *   所以这里在起播后隔一段时间推几次：只把 m_coverNudge 递增，让 coverTitle
-     *   交替带上一个【零宽空格】（肉眼不可见、不影响排版），借这一次"内容变化"
-     *   把封面顶出来。跑几次就够，之后不再打扰。
-     */
-    ++m_coverNudge;
-    emit coverInfoChanged();
-}
-
 QString MusicController::coverRealPath()
 {
     if (m_currentTrack.isEmpty())
@@ -1282,29 +1248,6 @@ QString MusicController::coverImagePath()
      */
     const QString shown = local;
 
-    /*
-     * ★★★ 关键一步：【先给占位，再切真图】—— 故意制造一次值变化。
-     *
-     *   实测：SceneCover 会"吃掉"第一次渲染。起播时就算 imageSource 直接是
-     *   真封面，封面服务那一次也画不出来；只有等到后续有内容变化（比如歌词
-     *   到达、或者切歌）才会补上。这就解释了真机现象：
-     *     · 有歌词   → 歌词每句都在变，不断触发重绘 → 正常 ✓
-     *     · 没歌词   → 起播后再没有变化 → 一直黑 ✗
-     *     · 未在播放 → 完全没有变化 → 黑 ✗
-     *
-     *   所以这里第一次求值先返回 asset:// 占位（打包资源，任何时刻都画得出来），
-     *   然后推迟一下再发通知 —— 那时 m_coverReady 已置位，返回值变成共享目录里
-     *   的真封面，imageSource 就有了 asset:// → file:// 的【真实值变化】，
-     *   逼系统重绘一次。
-     */
-    if (! m_coverReady) {
-        m_coverReady = true;
-        m_coverDiagPath = QLatin1String("PLACEHOLDER");
-        qWarning("MusicController: coverImagePath -> PLACEHOLDER (第一步：占位)");
-        QTimer::singleShot(80, this, SLOT(notifyCoverAgain()));
-        return kFallback;
-    }
-
     const QString out = QUrl::fromLocalFile(shown).toString();
     if (m_coverDiagPath != out) {
         m_coverDiagPath = out;
@@ -1324,14 +1267,6 @@ QString MusicController::coverTitle()
     } else {
         t = m_currentTrack.value(QLatin1String("name")).toString();   // 歌名
     }
-
-    /*
-     * ★ 奇数时追加一个【零宽空格】（U+200B）：肉眼不可见、不占宽度、不影响
-     *   排版，但能让这个值发生变化 —— 借这次"内容变化"驱动 SceneCover 重绘。
-     *   背景见 nudgeCover 的说明：静态状态下封面永远画不出来。
-     */
-    if (m_coverNudge % 2)
-        t += QChar(0x200B);
 
     return t;
 }
@@ -1527,19 +1462,6 @@ void MusicController::playIndex(int index)
      *   （见 onAppForegrounded 的兜底判定）。
      */
     m_advanceHandled = false;
-    // ★ 换歌：封面回到"先占位、再切真图"的第一步（见 coverImagePath 的说明）
-    m_coverReady = false;
-    /*
-     * ★ 起播后"推"封面几次（见 nudgeCover 的说明）：置 0 让封面先回到真图，
-     *   随后几次推挤会交替引入零宽空格，把 SceneCover 的重绘带起来。
-     *   封面图下载/复制需要时间，所以第一次推延后一点。
-     */
-    m_coverNudge = 0;
-    QTimer::singleShot(600,  this, SLOT(nudgeCover()));
-    QTimer::singleShot(1400, this, SLOT(nudgeCover()));
-    QTimer::singleShot(2400, this, SLOT(nudgeCover()));
-    QTimer::singleShot(3600, this, SLOT(nudgeCover()));
-
     /*
      * ★ 起播就【预取】640px 大图（bigImageCache）。
      *   封面（AppCover）和正在播放页用的都是这份缓存；不预取的话，

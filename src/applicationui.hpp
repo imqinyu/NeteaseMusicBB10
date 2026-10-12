@@ -18,6 +18,8 @@
 #define ApplicationUI_HPP_
 
 #include <QObject>
+#include <QSize>
+#include <QRectF>
 
 namespace bb {
 namespace multimedia {
@@ -30,10 +32,12 @@ namespace bb
     namespace cascades
     {
         class LocaleHandler;
+        class SceneCover;
     }
 }
 
 class QTranslator;
+class QTimer;
 class MusicController;
 
 /*!
@@ -49,14 +53,27 @@ public:
     virtual ~ApplicationUI() {}
 private slots:
     void onSystemLanguageChanged();
+    void logAppCoverSizes();
+    void onCoverSizeChanged(const QSize &size);
+    void onCoverLayoutChanged(const QRectF &frame);
+    void onCoverThumbnailed();
+    void onCoverHidden();
+    void advanceCoverPrime();
 private:
     void registerQmlTypes();
+    void createAppCover();
+    void scheduleCoverPrime();
+    bb::cascades::SceneCover* createCoverScene(bool compact);
 
     QTranslator* m_pTranslator;
     bb::cascades::LocaleHandler* m_pLocaleHandler;
     MusicController* m_pMusic;
     /*! 唯一的播放器实例（做成 context property，见 applicationui.cpp 的说明） */
     bb::multimedia::MediaPlayer* m_pPlayer;
+    bb::cascades::SceneCover* m_coverHigh;
+    bb::cascades::SceneCover* m_coverMedium;
+    QTimer* m_coverPrimeTimer;
+    bool m_coverInThumbnail;
 };
 
 #endif /* ApplicationUI_HPP_ */
