@@ -330,7 +330,7 @@ Page {
                                     ActionItem {
                                         title: qsTr("搜索该艺人")
                                         onTriggered: {
-                                            udArtist.ListItem.view.controller.search(udArtist.ListItem.data.name)
+                                            udArtist.ListItem.view.controller.requestOpenSearch(udArtist.ListItem.data.name)
                                         }
                                     }
                                 ]

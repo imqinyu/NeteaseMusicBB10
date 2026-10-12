@@ -11,6 +11,8 @@ import bb.cascades 1.4
 Page {
     id: searchPage
     objectName: "searchPage"
+    // External artist searches prefill the field; changing it does not submit a second request.
+    property alias searchText: searchField.text
 
     titleBar: TitleBar {
         title: qsTr("搜索")

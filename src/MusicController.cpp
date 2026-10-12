@@ -4195,6 +4195,30 @@ void MusicController::mergeArtUrls(const QList<nm::NmSong> &details)
         maps.replace(i, map);
     }
 
+    // SearchPage keeps its own snapshot. Details arrive after that snapshot was
+    // copied, so enrich it by song ID rather than copying the mutable browse model.
+    // Repeated IDs in search results must all receive the same artwork.
+    bool searchArtChanged = false;
+    for (int i = 0; i < m_searchSongs->size(); ++i) {
+        QVariantMap map = m_searchSongs->value(i).toMap();
+        const qint64 id = map.value(QLatin1String("id")).toString().toLongLong();
+        if (!artUrls.contains(id))
+            continue;
+        const QString artUrl = artUrls.value(id);
+        const QString local = m_imageCache->pathFor(artUrl);
+        if (map.value(QLatin1String("artUrl")).toString() == artUrl
+                && map.value(QLatin1String("localArtPath")).toString() == local)
+            continue;
+        map.insert(QLatin1String("artUrl"), artUrl);
+        map.insert(QLatin1String("localArtPath"), local);
+        m_searchSongs->replace(i, map);
+        searchArtChanged = true;
+    }
+    if (searchArtChanged) {
+        ++m_searchSongsVersion;
+        emit searchSongsChanged();
+    }
+
     if (m_artistMode) {
         // 艺人页：专辑封面也重建
         buildArtistAlbums();
@@ -5196,6 +5220,7 @@ void MusicController::refreshImagePaths()
          *     m_recommendSongs 每日推荐
          */
         { m_browseSongs,       "artUrl",        "localArtPath"    },
+        { m_searchSongs,       "artUrl",        "localArtPath"    },
         { m_artistSongs,       "artUrl",        "localArtPath"    },
         { m_recommendSongs,    "artUrl",        "localArtPath"    }
     };

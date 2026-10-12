@@ -86,7 +86,7 @@ Page {
                                     ActionItem {
                                         title: qsTr("搜索该艺人")
                                         onTriggered: {
-                                            item.ListItem.view.controller.search(item.ListItem.data.name)
+                                            item.ListItem.view.controller.requestOpenSearch(item.ListItem.data.name)
                                         }
                                     }
                                 ]

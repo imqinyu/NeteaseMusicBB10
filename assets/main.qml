@@ -208,7 +208,9 @@ TabbedPane {
     }
     function openSearchByName(name) {
         music.search(name)
-        root.pushPage(playlistPageDef)
+        root.pushPage(searchPageDef, function (p) {
+            p.searchText = name
+        })
     }
     function openAlbumById(id) {
         music.loadAlbum(id)
@@ -543,7 +545,7 @@ TabbedPane {
                                                 ActionItem {
                                                     title: qsTr("搜索艺人")
                                                     onTriggered: {
-                                                        libArtist.ListItem.view.controller.search(libArtist.ListItem.data.name)
+                                                        libArtist.ListItem.view.controller.requestOpenSearch(libArtist.ListItem.data.name)
                                                     }
                                                     imageSource: "asset:///icons/ic_search.png"
                                                 },
