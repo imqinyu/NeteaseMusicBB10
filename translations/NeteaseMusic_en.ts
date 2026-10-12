@@ -864,6 +864,30 @@ Copy the MUSIC_U value (or the full cookie).</translation>
             <source>已删除 %1 个音乐文件</source>
             <translation>Deleted %1 audio files</translation>
         </message>
+        <message utf8="true">
+            <source>音频质量</source>
+            <translation>Audio quality</translation>
+        </message>
+        <message utf8="true">
+            <source>已用 %1 MB / %2 MB（%3%）</source>
+            <translation>Used %1 MB / %2 MB (%3%)</translation>
+        </message>
+        <message utf8="true">
+            <source>已用 %1 MB / 不限</source>
+            <translation>Used %1 MB / Unlimited</translation>
+        </message>
+        <message utf8="true">
+            <source>缓存上限</source>
+            <translation>Cache limit</translation>
+        </message>
+        <message utf8="true">
+            <source>不限</source>
+            <translation>Unlimited</translation>
+        </message>
+        <message utf8="true">
+            <source>缓存超过上限时自动清理较旧的音乐。</source>
+            <translation>Older music files are automatically removed when the cache exceeds its limit.</translation>
+        </message>
     </context>
     <context>
         <name>SongListItem</name>

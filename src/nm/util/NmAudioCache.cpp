@@ -109,6 +109,7 @@ void NmAudioCache::onFinished()
     f.close();
 
     enforceLimit();
+    emit changed();
 }
 
 void NmAudioCache::enforceLimit()
@@ -146,6 +147,7 @@ int NmAudioCache::clear()
         if (QFile::remove(m_cacheDir + QLatin1Char('/') + name))
             ++removed;
     }
+    emit changed();
     return removed;
 }
 
@@ -181,6 +183,7 @@ void NmAudioCache::setLimitMb(int mb)
 
     // 立刻按新上限清一次（用户把上限调小了往往就是想马上腾空间）
     enforceLimit();
+    emit changed();
 }
 
 } // namespace nm

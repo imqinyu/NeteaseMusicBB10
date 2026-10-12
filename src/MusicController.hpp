@@ -737,6 +737,9 @@ public:
      */
     Q_INVOKABLE void setAudioCacheLimit(int mb);
     Q_INVOKABLE int audioCacheLimit() const;
+    Q_PROPERTY(double audioCacheUsedMb READ audioCacheUsedMb NOTIFY audioCacheChanged)
+    Q_PROPERTY(int audioCacheMaxMb READ audioCacheLimit NOTIFY audioCacheChanged)
+    double audioCacheUsedMb() const;
     /*! 设置页：清空音频缓存，@return 删掉的文件数 */
     Q_INVOKABLE int clearAudioCache();
 
@@ -1054,6 +1057,7 @@ signals:
     void allSongsChanged();
     void mvUrlChanged();
     void languagePreferenceChanged();
+    void audioCacheChanged();
     void currentTrackChanged();
     void propertiesChanged();
     void playUrlChanged();

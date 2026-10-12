@@ -16,13 +16,6 @@ Page {
         title: qsTr("设置")
     }
 
-    function refresh() {
-        cacheInfoLabel.text = music.cacheInfo()
-    }
-
-    onCreationCompleted: {
-        refresh()
-    }
 
     ScrollView {
         Container {
@@ -97,9 +90,109 @@ Page {
                     }
                 }
             }
+            // ================= Music cache =================
+            Header { title: qsTr("缓存") }
+            Container {
+                id: cacheSection
+                horizontalAlignment: HorizontalAlignment.Fill
+                leftPadding: ui.du(1)
+                rightPadding: ui.du(1)
+                topPadding: ui.du(1)
+                bottomPadding: ui.du(1)
+                property real usedMb: music.audioCacheUsedMb
+                property int limitMb: music.audioCacheMaxMb
+                property real percent: limitMb > 0 ? usedMb * 100 / limitMb : 0
+                Label {
+                    text: cacheSection.limitMb > 0
+                          ? qsTr("已用 %1 MB / %2 MB（%3%）").arg(cacheSection.usedMb.toFixed(1)).arg(cacheSection.limitMb).arg(Math.floor(cacheSection.percent))
+                          : qsTr("已用 %1 MB / 不限").arg(cacheSection.usedMb.toFixed(1))
+                    multiline: true
+                    textStyle {
+                        base: SystemDefaults.TextStyles.TitleText
+                        fontWeight: FontWeight.Bold
+                    }
+                }
+                ProgressIndicator {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    visible: cacheSection.limitMb > 0
+                    fromValue: 0
+                    toValue: 100
+                    value: Math.max(0, Math.min(100, cacheSection.percent))
+                    state: ProgressIndicatorState.Progress
+                    preferredHeight: ui.du(0.5)
+                    minHeight: preferredHeight
+                    maxHeight: preferredHeight
+                }
+                DropDown {
+                    id: cacheLimitChoice
+                    title: qsTr("缓存上限")
+                    property bool ready: false
+                    Option { text: "512 MB"; value: 512 }
+                    Option { text: "1 GB"; value: 1024 }
+                    Option { text: "2 GB"; value: 2048 }
+                    Option { text: "3 GB"; value: 3072 }
+                    Option { text: "5 GB"; value: 5120 }
+                    Option { text: qsTr("不限"); value: 0 }
+                    onCreationCompleted: {
+                        var limits = [512, 1024, 2048, 3072, 5120, 0]
+                        for (var i = 0; i < limits.length; ++i) {
+                            if (limits[i] == music.audioCacheMaxMb) {
+                                selectedIndex = i
+                                break
+                            }
+                        }
+                        ready = true
+                    }
+                    onSelectedValueChanged: {
+                        if (ready)
+                            music.setAudioCacheLimit(selectedValue)
+                    }
+                }
+                Button {
+                    text: qsTr("清除音乐缓存")
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    onClicked: {
+                        var removed = music.clearAudioCache()
+                        music.notifyError(qsTr("已删除 %1 个音乐文件").arg(removed))
+                    }
+                }
+                Label {
+                    text: qsTr("缓存超过上限时自动清理较旧的音乐。")
+                    multiline: true
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    textStyle {
+                        base: SystemDefaults.TextStyles.SmallText
+                        color: ui.palette.secondaryTextOnPlain
+                        textAlign: TextAlign.Center
+                    }
+                }
+            }
+
             // ================= 内容 =================
             Header {
                 title: qsTr("内容")
+            }
+            Container {
+                topPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                DropDown {
+                    id: qualityChoice
+                    title: qsTr("音频质量")
+                    property bool ready: false
+                    Option { text: qsTr("标准 128k"); value: 128000 }
+                    Option { text: qsTr("较高 192k"); value: 192000 }
+                    Option { text: qsTr("极高 320k"); value: 320000 }
+                    onCreationCompleted: {
+                        selectedIndex = music.bitrate == 320000 ? 2 : music.bitrate == 192000 ? 1 : 0
+                        ready = true
+                    }
+                    onSelectedValueChanged: {
+                        if (ready)
+                            music.setBitrate(selectedValue)
+                    }
+                }
             }
             Container {
                 topPadding: ui.du(1.0)
@@ -240,6 +333,7 @@ Page {
                 }
             }
 
+
             // ================= 调试 =================
             //开关不起作用
 //            Header {
@@ -270,128 +364,6 @@ Page {
 //                    }
 //                }
 //            }
-
-            // ================= 音质 =================
-            Header {
-                title: qsTr("音质")
-            }
-            RadioGroup {
-                
-                Option {
-                    text: qsTr("标准 128k")
-                    value: 128000
-                    selected: music.bitrate == 128000
-                }
-                Option {
-                    text: qsTr("较高 192k")
-                    value: 192000
-                    selected: music.bitrate == 192000
-                }
-                Option {
-                    text: qsTr("极高 320k")
-                    value: 320000
-                    selected: music.bitrate == 320000
-                }
-                onSelectedValueChanged: {
-                    music.setBitrate(selectedValue)
-                }
-            }
-
-
-
-
-           
-
-            // ================= 缓存 =================
-            Header {
-                title: qsTr("缓存")
-            }
-
-            Container {
-                leftPadding: 15.0
-                rightPadding: 15.0
-
-                topMargin: 5.0
-                bottomMargin: 5.0
-                topPadding: 5.0
-                DropDown {
-                    options: [
-                        Option {
-                            text: "512MB "
-
-                        },
-                        Option {
-                            text: "1G"
-
-                        },
-                        Option {
-                            text: "2G"
-
-                        },
-                        Option {
-                            text: "3G"
-
-                        },
-                        Option {
-                            text: "5G"
-
-                        }
-                    ]
-                    title: qsTr("音乐缓存上限")
-                    /*
-                     * ★ 这里按【下标】映射上限（MB），因为 Option 没写 value：
-                     * 0→512  1→1024  2→2048  3→3072  4→5120
-                     * 进页面时按当前设置选中对应项；改动立刻落盘并按新上限清理。
-                     */
-                    onCreationCompleted: {
-                        var limits = [ 512, 1024, 2048, 3072, 5120 ]
-                        var cur = music.audioCacheLimit()
-                        for (var i = 0; i < limits.length; i ++) {
-                            if (limits[i] == cur) {
-                                selectedIndex = i
-                                break
-                            }
-                        }
-                    }
-                    onSelectedIndexChanged: {
-                        var limits = [ 512, 1024, 2048, 3072, 5120 ]
-                        if (selectedIndex >= 0 && selectedIndex < limits.length)
-                            music.setAudioCacheLimit(limits[selectedIndex])
-                    }
-
-                }
-            }
-            Label {
-                id: cacheInfoLabel
-                multiline: true
-                textStyle {
-                    base: SystemDefaults.TextStyles.SmallText
-                    color: ui.palette.textOnPlain
-                }
-            }
-            Button {
-                text: qsTr("清除图片缓存")
-                horizontalAlignment: HorizontalAlignment.Fill
-                onClicked: {
-                    cacheInfoLabel.text = qsTr("已删除 %1 个文件").arg(music.clearImageCache())
-                }
-            }
-            Button {
-                text: qsTr("清除歌单缓存")
-                horizontalAlignment: HorizontalAlignment.Fill
-                onClicked: {
-                    music.clearPlaylistCache()
-                    cacheInfoLabel.text = qsTr("歌单缓存已清除")
-                }
-            }
-            Button {
-                // 只删已下载的歌曲文件，不影响正在播放
-                text: qsTr("清除音乐缓存")
-                horizontalAlignment: HorizontalAlignment.Fill
-                onClicked: {
-                    cacheInfoLabel.text = qsTr("已删除 %1 个音乐文件").arg(music.clearAudioCache())
-                }
-            }
 
         }
     }

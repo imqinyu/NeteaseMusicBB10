@@ -292,6 +292,7 @@ MusicController::MusicController(QObject *parent)
 
     // 音频落盘缓存（播放的同时后台缓存，见 NmAudioCache）
     m_audioCache = new nm::NmAudioCache(this);
+    connect(m_audioCache, SIGNAL(changed()), this, SIGNAL(audioCacheChanged()));
 
     // 歌词开关 / 翻译开关：从设置里恢复
     {
@@ -5004,6 +5005,11 @@ void MusicController::setAudioCacheLimit(int mb)
 int MusicController::audioCacheLimit() const
 {
     return m_audioCache->limitMb();
+}
+
+double MusicController::audioCacheUsedMb() const
+{
+    return m_audioCache->cacheSizeBytes() / (1024.0 * 1024.0);
 }
 
 int MusicController::clearAudioCache()

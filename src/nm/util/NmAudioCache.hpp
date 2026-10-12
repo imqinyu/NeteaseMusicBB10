@@ -11,7 +11,7 @@
  *   没命中        → 照常流式播（体验完全不变），同时 download() 后台下，
  *                   下次再听同一首就是本地文件了。
  *
- * 目录用 QDir::tempPath() 下的子目录（和图片缓存同一个思路），跨启动复用；
+ * 目录使用应用私有的持久目录，跨启动复用；
  * 按上限（MB）自动清理最旧的文件，上限在设置页可调，0 = 不限。
  */
 
@@ -56,6 +56,9 @@ public:
     int limitMb() const { return m_limitMb; }
 
     QString cacheDir() const { return m_cacheDir; }
+
+signals:
+    void changed();
 
 private slots:
     void onFinished();
