@@ -5,6 +5,7 @@ import bb.cascades 1.4
 Container {
     id: coverContent
     property bool supportsMediumCover: true
+    property bool useLayoutPrime: true
     property bool coverCompact: appCover.objectName == "medium"
     implicitLayoutAnimationsEnabled: false
     preferredWidth: appCover.size.width > 0 ? appCover.size.width : 310

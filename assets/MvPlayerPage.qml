@@ -69,11 +69,21 @@ Page {
     Container {
         layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
         Container {
+            id: videoFrame
+            property real frameWidth: 0
             horizontalAlignment: HorizontalAlignment.Fill
-            preferredHeight: ui.sdu(40)
-            minHeight: ui.sdu(24)
+            // Use the actual Cascades layout width, including orientation changes.
+            preferredHeight: frameWidth > 0 ? frameWidth * 9 / 16 : ui.sdu(40)
+            minHeight: preferredHeight
+            maxHeight: preferredHeight
             background: Color.Black
             layout: DockLayout {}
+            attachedObjects: LayoutUpdateHandler {
+                onLayoutFrameChanged: {
+                    if (layoutFrame.width > 0)
+                        videoFrame.frameWidth = layoutFrame.width
+                }
+            }
             ForeignWindowControl {
                 id: mvSurface
                 windowId: mvPage.windowKey

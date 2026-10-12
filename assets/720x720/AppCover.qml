@@ -5,6 +5,8 @@ import bb.cascades 1.4
 Container {
     id: coverContent
     property bool supportsMediumCover: false
+    // Keep the Q10/Q20 cover visible while requesting its first redraw.
+    property bool useLayoutPrime: true
     property bool coverCompact: appCover.objectName == "medium"
     implicitLayoutAnimationsEnabled: false
     preferredWidth: appCover.size.width > 0 ? appCover.size.width : 310

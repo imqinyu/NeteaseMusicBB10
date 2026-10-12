@@ -217,7 +217,9 @@ void ApplicationUI::createAppCover()
         m_coverMedium->setParent(cover);
         cover->add(m_coverMedium, CoverDetailLevel::Medium);
     }
-    fprintf(stderr, "[COVER] build=passport-layout-v5 installed=high%s\n", supportsMedium ? "+medium" : "");
+    fprintf(stderr, "[COVER] build=device-prime-v6 installed=high%s prime=%s\n",
+            supportsMedium ? "+medium" : "",
+            m_coverHigh->content()->property("useLayoutPrime").toBool() ? "layout" : "visibility");
     Application::instance()->setCover(cover);
     logAppCoverSizes();
 }
@@ -281,11 +283,11 @@ void ApplicationUI::advanceCoverPrime()
         if (!cover || !cover->property("primePending").toBool())
             continue;
         Container *content = qobject_cast<Container*>(cover->content());
-        const bool layoutPulse = content && content->property("supportsMediumCover").toBool();
+        const bool layoutPulse = content && content->property("useLayoutPrime").toBool();
         if (!cover->property("priming").toBool()) {
             cover->setProperty("priming", true);
-            // Passport needs a content/layout update after its first cover frame.
-            // Keep both roots visible: hiding both did not refresh MultiCover there.
+            // Q10/Q20 and Passport keep the root visible for the layout update.
+            // The visibility workaround remains limited to the default/Z10 variant.
             // One physical pixel changes the child geometry without changing track data.
             if (layoutPulse)
                 content->setLeftPadding(1.0f);
@@ -322,7 +324,7 @@ void ApplicationUI::onCoverHidden()
             continue;
         if (cover->property("priming").toBool()) {
             Container *content = qobject_cast<Container*>(cover->content());
-            if (content && content->property("supportsMediumCover").toBool())
+            if (content && content->property("useLayoutPrime").toBool())
                 content->resetLeftPadding();
             cover->content()->setVisible(true);
             fprintf(stderr, "[COVER] prime cancelled/restored level=%s\n", qPrintable(cover->objectName()));

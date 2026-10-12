@@ -131,6 +131,7 @@ Page {
                                              */
                                             item.ListItem.view.controller.playSearchSong(item.ListItem.indexPath[0])
                                         }
+                                        imageSource: "asset:///icons/ic_play.png"
                                     },
                                     ActionItem {
                                         // 把这首歌插到当前曲目的下一位（见 MusicController::playNextSong）
@@ -142,6 +143,7 @@ Page {
                                                           ? qsTr("已加入下一首：%1").arg(ListItemData.name)
                                                           : qsTr("这首歌已经在下一首了"))
                                         }
+                                        imageSource: "asset:///icons/ic_add_to_play_next.png"
                                     },
                                     ActionItem {
                                         title: qsTr("查看评论")
@@ -149,6 +151,7 @@ Page {
                                             // ★ 同上：按【搜索页独立模型】的下标取评论
                                             item.ListItem.view.controller.requestCommentsForSearchIndex(item.ListItem.indexPath[0])
                                         }
+                                        imageSource: "asset:///icons/ic_chat_multiperson.png"
                                     },
                                     ActionItem {
                                         title: qsTr("播放 MV")
@@ -159,6 +162,7 @@ Page {
                                                 ListItemData.name,
                                                 ListItemData.artistsText)
                                         }
+                                        imageSource: "asset:///icons/GridIconVideo.png"
                                     },
                                     ActionItem {
                                         /*
