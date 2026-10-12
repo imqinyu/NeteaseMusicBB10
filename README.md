@@ -55,7 +55,7 @@
 ## 开发团队
 
 - UI 原型 / QA：Fremantle
-- 编程 / 界面实现：Hy4、Hy3、Deepseek V4.1、Kimi K3
+- 编程 / 界面实现：Hy4、Hy3、Deepseek V4.1、Kimi K3、ChatGPT 6
 - 图标设计：ChatGPT
 
 ## 鸣谢
