@@ -1215,6 +1215,8 @@ private:
 
     /*! 按当前播放进度，把 m_currentLyricLine 更新到对应的那句歌词 */
     void updateLyricForPosition(int msec);
+    void resetCurrentLyric(qint64 songId);
+    void ensureCurrentLyric();
 
     /*! 这首歌在当前「隐藏 VIP」设置下是否应显示 */
     bool songVisible(const QVariantMap &map) const;
@@ -1365,6 +1367,9 @@ private:
      *   所以在 playIndex 发请求前记下来（见 saveLyricToCache / applyLyricFromCache）。
      */
     qint64 m_lyricSongId;
+    int m_lyricRequestId;
+    int m_propertiesLyricRequestId;
+    bool m_lyricsLoaded;
 
     /*!
      * cookie 存储。★ 必须注入给 m_http，否则 NmHttpClient 里那段收集

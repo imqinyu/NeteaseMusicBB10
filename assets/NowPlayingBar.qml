@@ -152,9 +152,13 @@ Container {
                              ? music.currentLyricLine
                              : music.currentTrack.name)
                     textStyle {
-                        // 字号和列表项标题一致
-                        base: SystemDefaults.TextStyles.SubtitleText
+                        // Official Music mini-player: prominent, regular-weight song title.
+                        base: SystemDefaults.TextStyles.TitleText
+                        fontSize: FontSize.Default
+                        fontWeight: FontWeight.W400
+                        color: ui.palette.textOnPlain
                     }
+                    bottomMargin: 0
                 }
                 Label {
                     /*
@@ -173,9 +177,12 @@ Container {
                                    + music.currentTrack.artistsText))
                              : music.currentTrack.artistsText)
                     textStyle {
-                        base: SystemDefaults.TextStyles.SmallText
-                        color: ui.palette.textOnPlain
+                        base: SystemDefaults.TextStyles.SubtitleText
+                        fontSize: FontSize.XSmall
+                        fontWeight: FontWeight.W300
+                        color: ui.palette.secondaryTextOnPlain
                     }
+                    topMargin: 0
                 }
             }
         }

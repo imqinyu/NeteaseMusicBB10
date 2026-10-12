@@ -190,6 +190,9 @@ MusicController::MusicController(QObject *parent)
     //   -Wreorder，这里直接赋值更省事
     m_advanceHandled = false;
     m_lyricSongId = 0;
+    m_lyricRequestId = 0;
+    m_propertiesLyricRequestId = 0;
+    m_lyricsLoaded = false;
     m_cookieStore = 0;
     m_qrStatus = 0;
     m_qrTimer = 0;
@@ -1476,40 +1479,10 @@ void MusicController::playIndex(int index)
             m_bigImageCache->pathFor(art);
     }
 
-    /*
-     * 取这首的歌词：主界面迷你条（歌词开关打开时）要显示当前这句。
-     * 换歌先把上一首的歌词清掉，避免短暂显示上一条。
-     */
-    if (m_lyricsEnabled) {
-        const qint64 sid = song.value(QLatin1String("id")).toString().toLongLong();
-        if (sid > 0) {
-            m_lyricRaw.clear();
-            m_transRaw.clear();
-            m_lyricTimes.clear();
-            m_lyricTexts.clear();
-            m_lyricTrans.clear();
-            if (!m_currentLyricLine.isEmpty()) {
-                m_currentLyricLine.clear();
-                emit currentLyricLineChanged();
-                emit coverInfoChanged();
-            }
-            // ★ 翻译也要跟着清，否则换歌瞬间会显示上一首的翻译
-            if (!m_currentLyricTrans.isEmpty()) {
-                m_currentLyricTrans.clear();
-                emit currentLyricTransChanged();
-                emit coverInfoChanged();
-            }
-
-            /*
-             * ★ 先查【本地歌词缓存】：命中就直接用，不发请求 ——
-             *   省流量，而且无网络时照样有歌词（用户反馈要的就是这个）。
-             *   没缓存才去问服务器，回来在 onLyricFinished 里存一份。
-             */
-            m_lyricSongId = sid;
-            if (! applyLyricFromCache(sid))
-                m_api->fetchLyric(sid);
-        }
-    }
+    // Clear the previous song even when display is disabled; re-enabling must not reuse it.
+    resetCurrentLyric(song.value(QLatin1String("id")).toString().toLongLong());
+    if (m_lyricsEnabled)
+        ensureCurrentLyric();
 
     // ★ 用户真的播了 → 当前列表被接管为队列（restoreList 据此不再还原）
     m_queueAdopted = true;
@@ -1767,17 +1740,12 @@ void MusicController::setLyricsEnabled(bool on)
     QSettings settings;
     settings.setValue(QLatin1String("nm/lyrics"), m_lyricsEnabled);
 
-    emit lyricsEnabledChanged();
-    emit coverInfoChanged();
-
-    /*
-     * ★ 关掉「主界面显示歌词」时，翻译开关要【先跟着关掉】，QML 那边再把它
-     *   置灰（SettingsPage 里 enabled 绑 music.lyricsEnabled）。
-     *   翻译单独开着没有任何意义 —— 它只在歌词模式下才可能显示出来。
-     *   顺序很关键：先关值、后禁用，界面上才不会出现"已禁用但仍亮着"的状态。
-     */
     if (!m_lyricsEnabled)
         setLyricsTransEnabled(false);
+    else
+        ensureCurrentLyric();
+    emit lyricsEnabledChanged();
+    emit coverInfoChanged();
 }
 
 QString MusicController::currentLyricLine() const
@@ -1792,6 +1760,7 @@ bool MusicController::lyricsTransEnabled() const
 
 void MusicController::setLyricsTransEnabled(bool on)
 {
+    on = on && m_lyricsEnabled;
     if (m_lyricsTransEnabled == on)
         return;
     m_lyricsTransEnabled = on;
@@ -1799,6 +1768,8 @@ void MusicController::setLyricsTransEnabled(bool on)
     QSettings settings;
     settings.setValue(QLatin1String("nm/lyricsTrans"), m_lyricsTransEnabled);
 
+    if (on)
+        ensureCurrentLyric();
     emit lyricsTransEnabledChanged();
     emit coverInfoChanged();
 }
@@ -2043,6 +2014,7 @@ void MusicController::requestOpenPropertiesFor(const QVariantMap &song)
     m_propertiesTrack = song;
     m_propertiesLyric.clear();
     m_propertiesLyricFetching = false;
+    m_propertiesLyricRequestId = 0;
 
     /*
      * 歌词：目标就是"正在播放这一首"时直接用手上那份，省一次请求；
@@ -2051,13 +2023,13 @@ void MusicController::requestOpenPropertiesFor(const QVariantMap &song)
      *   那些是主界面迷你条在用的，顶掉就会串词（分流见 onLyricFinished）。
      */
     const QString curId = m_currentTrack.value(QLatin1String("id")).toString();
-    if (!curId.isEmpty() && curId == id) {
+    if (!curId.isEmpty() && curId == id && m_lyricsLoaded && m_lyricSongId == id.toLongLong()) {
         m_propertiesLyric = m_lyricRaw;
     } else {
         const qint64 sid = id.toLongLong();
         if (sid > 0) {
             m_propertiesLyricFetching = true;
-            m_api->fetchLyric(sid);
+            m_propertiesLyricRequestId = m_api->fetchLyric(sid);
         }
     }
 
@@ -3477,7 +3449,26 @@ bool MusicController::applyLyricFromCache(qint64 songId)
 void MusicController::onLyricFinished(int requestId,
                                       const nm::NmParsers::LyricParse &result)
 {
-    Q_UNUSED(requestId);
+    // Cached playback lyrics use requestId=0. Network replies must match their own channel.
+    if (requestId != 0 && requestId == m_propertiesLyricRequestId) {
+        m_propertiesLyricRequestId = 0;
+        m_propertiesLyricFetching = false;
+        if (result.ok) {
+            m_propertiesLyric = result.lyric;
+            const qint64 id = m_propertiesTrack.value(QLatin1String("id")).toString().toLongLong();
+            saveLyricToCache(id, result.lyric, result.trans);
+        }
+        ++m_propertiesVersion;
+        emit propertiesChanged();
+        return;
+    }
+    if (requestId != 0) {
+        if (requestId != m_lyricRequestId)
+            return;
+        m_lyricRequestId = 0;
+    }
+    if (m_currentTrack.value(QLatin1String("id")).toString().toLongLong() != m_lyricSongId)
+        return;
 
     /*
      * ★ 诊断放在【最前面】：之前它在 `if (!result.ok) return;` 之后，
@@ -3499,25 +3490,13 @@ void MusicController::onLyricFinished(int requestId,
     }
 
     /*
-     * ★★ 分流：这次请求如果是【详情页】替列表里某首歌发的，就只把原文存进
-     *   m_propertiesLyric —— 绝不动 m_lyricRaw / m_lyricTimes。
-     *   那些是主界面迷你条正在用的歌词，顶掉就会串词。
-     */
-    if (m_propertiesLyricFetching) {
-        m_propertiesLyricFetching = false;
-        m_propertiesLyric = result.lyric;
-        ++m_propertiesVersion;
-        emit propertiesChanged();
-        return;
-    }
-
-    /*
      * ★ 存一份到本地：下次无网络（或接口挂了）就走缓存显示。
      *   放在这里（主分支）是安全的 —— 上面 properties（详情页）那段
      *   已经 return 了，不会把详情页那首的歌词错存成当前播放这首的。
      */
     saveLyricToCache(m_lyricSongId, result.lyric, result.trans);
 
+    m_lyricsLoaded = true;
     m_lyricRaw = result.lyric;
     m_transRaw = result.trans;
 
@@ -3631,6 +3610,43 @@ void MusicController::onLyricFinished(int requestId,
 
     // 立刻按当前位置同步一次（歌词常比进度晚到）
     updateLyricForPosition(m_playerPosition);
+}
+
+void MusicController::resetCurrentLyric(qint64 songId)
+{
+    m_lyricSongId = songId;
+    m_lyricRequestId = 0;  // Late replies for the previous song are ignored.
+    m_lyricsLoaded = false;
+    m_lyricRaw.clear();
+    m_transRaw.clear();
+    m_lyricTimes.clear();
+    m_lyricTexts.clear();
+    m_lyricTrans.clear();
+    if (!m_currentLyricLine.isEmpty()) {
+        m_currentLyricLine.clear();
+        emit currentLyricLineChanged();
+    }
+    if (!m_currentLyricTrans.isEmpty()) {
+        m_currentLyricTrans.clear();
+        emit currentLyricTransChanged();
+    }
+    emit coverInfoChanged();
+}
+
+void MusicController::ensureCurrentLyric()
+{
+    const qint64 id = m_currentTrack.value(QLatin1String("id")).toString().toLongLong();
+    if (!m_lyricsEnabled || id <= 0)
+        return;
+    if (m_lyricSongId != id)
+        resetCurrentLyric(id);
+    // Reading the actual player position also works while paused (no position tick).
+    const int position = m_mediaPlayer ? static_cast<int>(m_mediaPlayer->position()) : m_playerPosition;
+    if (!m_lyricsLoaded && m_lyricRequestId == 0 && !applyLyricFromCache(id))
+        m_lyricRequestId = m_api->fetchLyric(id);
+    updateLyricForPosition(position);
+    qWarning("[LYRIC] ensure id=%lld loaded=%d pending=%d position=%d",
+             (long long)id, m_lyricsLoaded ? 1 : 0, m_lyricRequestId, position);
 }
 
 void MusicController::updateLyricForPosition(int msec)
@@ -5309,7 +5325,14 @@ void MusicController::onRequestFailed(int requestId, const QString &tag,
                                       const QString &message,
                                       const QVariantMap &detail)
 {
-    Q_UNUSED(requestId);
+    if (requestId == m_lyricRequestId) {
+        m_lyricRequestId = 0;
+        applyLyricFromCache(m_lyricSongId);
+    }
+    if (requestId == m_propertiesLyricRequestId) {
+        m_propertiesLyricRequestId = 0;
+        m_propertiesLyricFetching = false;
+    }
     setError(message, detail);
     // 请求失败也要把去重标志清掉，否则之后再点就永远被挡
     if (tag == QLatin1String("userPlaylists"))
