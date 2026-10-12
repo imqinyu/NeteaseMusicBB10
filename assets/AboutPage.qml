@@ -41,7 +41,7 @@ Page {
             Label {
                 multiline: true
 
-                text: "网易云音乐第三方版 仅供学习使用\r\n免费分享 禁止倒卖\r\n欢迎加入BlackBerryPhonix\r\nQQ交流群:892633534"
+                text: qsTr("网易云音乐第三方版 仅供学习使用\n免费分享 禁止倒卖\n欢迎加入BlackBerryPhonix\nQQ交流群:892633534")
                 textStyle {
                     base: SystemDefaults.TextStyles.BodyText
                 }
@@ -54,7 +54,7 @@ Page {
             Label {
                 multiline: true
 
-                text: "UI原型、QA：Fremantle\r\n编程：Hy4、Hy3、Deepseek V4.1、Kimi K3\r\n图标设计：ChatGPT"
+                text: qsTr("UI原型、QA：Fremantle\n编程：Hy4、Hy3、Deepseek V4.1、Kimi K3\n图标设计：ChatGPT")
                 textStyle {
                     base: SystemDefaults.TextStyles.BodyText
                 }
@@ -65,7 +65,7 @@ Page {
             Label {
                 multiline: true
 
-                text: "排名不分先后\r\nOleksandr：提供越狱漏洞和工具\r\nPablo from WaitBerry:提供参考文档\r\nGithub NeteaseCloudMusicApiEnhanced项目：提供网易云接口\r\nAnwar Ludin、Davenson Lombard：提供免费的黑莓开发教程\r\n以及所有支持我的AI朋友们"
+                text: qsTr("排名不分先后\nOleksandr：提供越狱漏洞和工具\nPablo from WaitBerry:提供参考文档\nGithub NeteaseCloudMusicApiEnhanced项目：提供网易云接口\nAnwar Ludin、Davenson Lombard：提供免费的黑莓开发教程\n以及所有支持我的AI朋友们")
                 textStyle {
                     base: SystemDefaults.TextStyles.BodyText
                 }

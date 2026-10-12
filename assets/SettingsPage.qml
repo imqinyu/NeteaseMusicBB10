@@ -32,16 +32,16 @@ Page {
 
             // ================= 主题 =================
             Header {
-                title: qsTr("主题")
+                title: qsTr("界面")
             }
             Container {
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
                 }
-                topPadding: 5.0
-                bottomPadding: 5.0
-                rightPadding: 15.0
-                leftPadding: 15.0
+                topPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
                 Label {
                     text: qsTr("暗色主题")
                     verticalAlignment: VerticalAlignment.Center
@@ -74,17 +74,38 @@ Page {
                     }
                 }
             }
-            
 
+            Container {
+                topPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                DropDown {
+                    id: languageChoice
+                    title: qsTr("语言")
+                    property bool ready: false
+                    Option { text: qsTr("跟随系统"); value: "auto" }
+                    Option { text: qsTr("中文"); value: "zh" }
+                    Option { text: "English"; value: "en" }
+                    onCreationCompleted: {
+                        selectedIndex = music.languagePreference == "zh" ? 1 : music.languagePreference == "en" ? 2 : 0
+                        ready = true
+                    }
+                    onSelectedValueChanged: {
+                        if (ready)
+                            music.setLanguagePreference(selectedValue)
+                    }
+                }
+            }
             // ================= 内容 =================
             Header {
                 title: qsTr("内容")
             }
             Container {
-                topPadding: 5.0
-                bottomPadding: 5.0
-                rightPadding: 15.0
-                leftPadding: 15.0
+                topPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
                 }
@@ -116,10 +137,10 @@ Page {
             }
             // ---- 歌词开关（打开后主界面迷你条显示歌词）----
             Container {
-                topPadding: 5.0
-                bottomPadding: 5.0
-                rightPadding: 15.0
-                leftPadding: 15.0
+                topPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
                 }
@@ -162,10 +183,10 @@ Page {
             }
             // ---- 歌词翻译开关（显示时副标题变成这句的翻译）----
             Container {
-                topPadding: 5.0
-                bottomPadding: 5.0
-                rightPadding: 15.0
-                leftPadding: 15.0
+                topPadding: ui.du(1.0)
+                bottomPadding: ui.du(1.0)
+                rightPadding: ui.du(1.0)
+                leftPadding: ui.du(1.0)
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
                 }
@@ -316,7 +337,7 @@ Page {
 
                         }
                     ]
-                    title: "音乐缓存上限"
+                    title: qsTr("音乐缓存上限")
                     /*
                      * ★ 这里按【下标】映射上限（MB），因为 Option 没写 value：
                      * 0→512  1→1024  2→2048  3→3072  4→5120

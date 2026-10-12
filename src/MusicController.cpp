@@ -472,13 +472,13 @@ void MusicController::setQrState(int status, const QString &text)
 void MusicController::startQrLogin()
 {
     if (m_loggedIn) {
-        setQrState(4, QString::fromUtf8("已经登录了"));
+        setQrState(4, NmTr("E5B7B2E7BB8FE799BBE5BD95E4BA86"));
         return;
     }
 
     m_qrKey.clear();
     m_qrImagePath.clear();
-    setQrState(1, QString::fromUtf8("正在获取二维码…"));
+    setQrState(1, NmTr("E6ADA3E59CA8E88EB7E58F96E4BA8CE7BBB4E7A081E280A6"));
 
     m_api->fetchQrKey();
 }
@@ -506,7 +506,7 @@ void MusicController::onQrKeyFinished(int requestId,
     if (!result.ok || result.unikey.isEmpty()) {
         qWarning("MusicController: qr key FAILED ok=%d code=%d",
                  result.ok ? 1 : 0, result.code);
-        setQrState(6, QString::fromUtf8("二维码获取失败，请点刷新重试"));
+        setQrState(6, NmTr("E4BA8CE7BBB4E7A081E88EB7E58F96E5A4B1E8B4A5EFBC8CE8AFB7E782B9E588B7E696B0E9878DE8AF95"));
         return;
     }
 
@@ -530,14 +530,14 @@ void MusicController::onQrKeyFinished(int requestId,
     if (! nm::NmQrCode::writePng(url, path)) {
         qWarning("MusicController: qr encode FAILED key=%s",
                  qPrintable(m_qrKey.left(8)));
-        setQrState(6, QString::fromUtf8("二维码生成失败"));
+        setQrState(6, NmTr("E4BA8CE7BBB4E7A081E7949FE68890E5A4B1E8B4A5"));
         return;
     }
 
     m_qrImagePath = QUrl::fromLocalFile(path).toString();
     qWarning("MusicController: qr ready key=%s", qPrintable(m_qrKey.left(8)));
 
-    setQrState(2, QString::fromUtf8("请用网易云音乐 App 扫码"));
+    setQrState(2, NmTr("E8AFB7E794A8E7BD91E69893E4BA91E99FB3E4B9902041707020E689ABE7A081"));
 
     if (m_qrTimer)
         m_qrTimer->start();
@@ -566,16 +566,16 @@ void MusicController::onQrStatusFinished(int requestId,
     case 800:            // 二维码过期
         if (m_qrTimer)
             m_qrTimer->stop();
-        setQrState(5, QString::fromUtf8("二维码已过期，请点刷新"));
+        setQrState(5, NmTr("E4BA8CE7BBB4E7A081E5B7B2E8BF87E69C9FEFBC8CE8AFB7E782B9E588B7E696B0"));
         break;
 
     case 801:            // 还没人扫
         if (m_qrStatus != 2)
-            setQrState(2, QString::fromUtf8("请用网易云音乐 App 扫码"));
+            setQrState(2, NmTr("E8AFB7E794A8E7BD91E69893E4BA91E99FB3E4B9902041707020E689ABE7A081"));
         break;
 
     case 802:            // 扫了，等手机上点确认
-        setQrState(3, QString::fromUtf8("已扫码，请在手机上确认"));
+        setQrState(3, NmTr("E5B7B2E689ABE7A081EFBC8CE8AFB7E59CA8E6898BE69CBAE4B88AE7A1AEE8AEA4"));
         break;
 
     case 803:            // 授权成功
@@ -592,12 +592,12 @@ void MusicController::onQrStatusFinished(int requestId,
                                : QString();
         if (musicU.isEmpty()) {
             qWarning("MusicController: qr authorized but NO MUSIC_U in cookie");
-            setQrState(6, QString::fromUtf8("授权成功，但没拿到登录凭证"));
+            setQrState(6, NmTr("E68E88E69D83E68890E58A9FEFBC8CE4BD86E6B2A1E68BBFE588B0E799BBE5BD95E587ADE8AF81"));
             return;
         }
 
         if (! m_session->setCookieInput(musicU)) {
-            setQrState(6, QString::fromUtf8("登录凭证无效"));
+            setQrState(6, NmTr("E799BBE5BD95E587ADE8AF81E697A0E69588"));
             return;
         }
 
@@ -605,7 +605,7 @@ void MusicController::onQrStatusFinished(int requestId,
          * 后面和「粘贴登录」完全一致：校验一次，成功会自动拉歌单等级那些
          * （见 onAccountFinished）。
          */
-        setQrState(4, QString::fromUtf8("授权成功，正在登录…"));
+        setQrState(4, NmTr("E68E88E69D83E68890E58A9FEFBC8CE6ADA3E59CA8E799BBE5BD95E280A6"));
         setLoading(true);
         m_api->fetchAccount();
         break;
@@ -1015,13 +1015,13 @@ QVariantList MusicController::songProperties() const
         return out;
 
     QVariantMap row;
-    row.insert(QLatin1String("title"), QString::fromUtf8("歌曲名"));
+    row.insert(QLatin1String("title"), NmTr("E6AD8CE69BB2E5908D"));
     row.insert(QLatin1String("description"),
                m_propertiesTrack.value(QLatin1String("name")));
     out.append(row);
 
     row.clear();
-    row.insert(QLatin1String("title"), QString::fromUtf8("作者"));
+    row.insert(QLatin1String("title"), NmTr("E4BD9CE88085"));
     row.insert(QLatin1String("description"),
                m_propertiesTrack.value(QLatin1String("artistsText")));
     out.append(row);
@@ -1033,13 +1033,13 @@ QVariantList MusicController::songProperties() const
     out.append(row);
 
     row.clear();
-    row.insert(QLatin1String("title"), QString::fromUtf8("长度"));
+    row.insert(QLatin1String("title"), NmTr("E995BFE5BAA6"));
     row.insert(QLatin1String("description"),
                m_propertiesTrack.value(QLatin1String("durationText")));
     out.append(row);
 
     row.clear();
-    row.insert(QLatin1String("title"), QString::fromUtf8("所属专辑"));
+    row.insert(QLatin1String("title"), NmTr("E68980E5B19EE4B893E8BE91"));
     row.insert(QLatin1String("description"),
                m_propertiesTrack.value(QLatin1String("albumName")));
     out.append(row);
@@ -1106,7 +1106,7 @@ void MusicController::onAlbumFinished(int requestId,
         }
 
         emit songsChanged();
-        notifyError(QString::fromUtf8("已加入队列 %1 首").arg(result.songs.size()));
+        notifyError(NmTr("E5B7B2E58AA0E585A5E9989FE5889720253120E9A696").arg(result.songs.size()));
         finishRequest(QLatin1String("album"), true);
         return;
     }
@@ -1922,6 +1922,24 @@ QString MusicController::theme() const
     return m_theme;
 }
 
+QString MusicController::languagePreference() const
+{
+    const QString value = QSettings().value(QLatin1String("nm/language"), QLatin1String("auto")).toString();
+    return value == QLatin1String("zh") || value == QLatin1String("en") ? value : QLatin1String("auto");
+}
+
+void MusicController::setLanguagePreference(const QString &language)
+{
+    if ((language != QLatin1String("auto") && language != QLatin1String("zh") && language != QLatin1String("en"))
+            || language == languagePreference())
+        return;
+    QSettings settings;
+    settings.setValue(QLatin1String("nm/language"), language);
+    settings.sync();
+    emit languagePreferenceChanged();
+    notifyError(NmTr("E8AFADE8A880E5B086E59CA8E9878DE590AFE5BA94E794A8E5908EE7949FE69588"));
+}
+
 void MusicController::setTheme(const QString &theme)
 {
     // 只认这两个值；其它（含空串）一律当"跟随系统"
@@ -2598,7 +2616,7 @@ void MusicController::loadAllSongs()
     }
 
     if (m_allSongsPendingIds.isEmpty()) {
-        setError(QString::fromUtf8("还没有歌单，请先登录并刷新我的歌单"));
+        setError(NmTr("E8BF98E6B2A1E69C89E6AD8CE58D95EFBC8CE8AFB7E58588E799BBE5BD95E5B9B6E588B7E696B0E68891E79A84E6AD8CE58D95"));
         return;
     }
 
@@ -3260,7 +3278,7 @@ static bool isLyricProductionLine(const QString &text)
             return true;
     }
 
-    return label == QString::fromUtf8("词") || label == QString::fromUtf8("曲");
+    return label == NmTr("E8AF8D") || label == NmTr("E69BB2");
 }
 
 /*! 字符串里有没有字母（中英文都算），用于排除"哎 - 呀"这类真歌词 */
@@ -4569,7 +4587,7 @@ void MusicController::onMvUrlFinished(int requestId,
         playbackUrl.replace(0, 5, QLatin1String("http"));
     const QUrl parsed(playbackUrl);
     if (!parsed.isValid() || parsed.scheme().toLower() != QLatin1String("http") || parsed.host().isEmpty()) {
-        setError(QString::fromUtf8("MV地址无效或不支持HTTP播放"));
+        setError(NmTr("4D56E59CB0E59D80E697A0E69588E68896E4B88DE694AFE68C8148545450E692ADE694BE"));
         finishRequest(QLatin1String("mvUrl"), false);
         return;
     }
@@ -4897,7 +4915,7 @@ void MusicController::openMv(const QString &mvId, const QString &name,
 {
     const qint64 id = mvId.toLongLong();
     if (id <= 0) {
-        notifyError(QString::fromUtf8("该歌曲没有 MV"));
+        notifyError(NmTr("E8AFA5E6AD8CE69BB2E6B2A1E69C89204D56"));
         return;
     }
 
@@ -4926,7 +4944,7 @@ void MusicController::requestMvComments()
     }
 
     // 换资源前先清，避免短暂显示上一个资源的评论
-    m_commentsTitle = QString::fromUtf8("MV评论");
+    m_commentsTitle = NmTr("4D56E8AF84E8AEBA");
     clearComments();
     setLoading(true);
     m_api->fetchMvComments(m_currentMvId, 30, 0);

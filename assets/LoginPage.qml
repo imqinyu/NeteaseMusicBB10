@@ -50,7 +50,7 @@ Page {
                 loginPage.inputError = ""
             }
 
-        },
+        }
 //        ActionItem {
 //            title: qsTr("二维码登录")
 //            ActionBar.placement: ActionBarPlacement.OnBar
@@ -85,7 +85,7 @@ Page {
         }
 
         Label {
-            text: qsTr("在电脑浏览器登录 music.163.com 后" + "\n点击开发者工具 → Application → Cookies " + "\n复制 MUSIC_U 的值（或整段 Cookie）")
+            text: qsTr("在电脑浏览器登录 music.163.com 后\n点击开发者工具 → Application → Cookies\n复制 MUSIC_U 的值（或整段 Cookie）")
             multiline: true
             textStyle {
                 base: SystemDefaults.TextStyles.BodyText

@@ -13,7 +13,7 @@ Page {
     Menu.definition: MenuDefinition {
         actions: [
             ActionItem {
-                title: "正在播放"
+                title: qsTr("正在播放")
                 imageSource: "asset:///icons/ic_play_on.png"
                 onTriggered: {
                     music.requestOpenNowPlaying()

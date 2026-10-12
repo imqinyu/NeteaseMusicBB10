@@ -47,6 +47,7 @@ first: Device-Debug
 #  $(4)=device|simulator），修正路径后编译。
 # --------------------------------------------------------------------------
 define BUILD_IN
+	@"$(QNX_HOST)/usr/bin/lrelease.exe" translations/NeteaseMusic_en.ts -qm translations/NeteaseMusic_en.qm
 	@mkdir -p $(1)
 	@echo "=== [$(1)] qmake ($(3)/$(4)) ==="
 	@cd $(1) && "$(QMAKE)" -spec "$(2)" "$(PROFILE)" -o Makefile \

@@ -20,10 +20,9 @@
  * 配套工具：tests\hexify-literals.ps1（把中文字面量自动转成这种形式）。
  * 用 tests\lint-encoding.ps1 校验不要再退回到非 ASCII 字面量。
  *
- * 注意：这里故意不用 QObject::tr()。
- *   一是 tr() 会去查 .qm 翻译表，而 .ts/.qm 是历史遗留、内容已损坏；
- *   二是文案还没做真正的本地化，先用确定能显示的写法。
- *   以后要做多语言时，把这个函数换成 tr() 即可（接口一致）。
+ * 界面文案解码后使用 NmTr 上下文查询翻译表。
+ * 中文不安装翻译器，直接返回原文；英文使用 NeteaseMusic_en.qm。
+ * nmFromHex 仍只负责解码，用于需要保持原始文本的场景。
  */
 
 #ifndef NM_TR_HPP
@@ -31,8 +30,16 @@
 
 #include <QByteArray>
 #include <QString>
+#include <QCoreApplication>
 
 namespace nm {
+
+inline bool useChineseUi(const QString &preference, const QString &systemLocale)
+{
+    return preference == QLatin1String("zh")
+            || (preference != QLatin1String("en")
+                && systemLocale.startsWith(QLatin1String("zh"), Qt::CaseInsensitive));
+}
 
 /*!
  * 把 UTF-8 字节的十六进制串解码成 QString。
@@ -47,12 +54,19 @@ inline QString nmFromHex(const char *hex)
     return QString::fromUtf8(bytes.constData(), bytes.size());
 }
 
+inline QString nmTranslateHex(const char *hex)
+{
+    const QByteArray source = nmFromHex(hex).toUtf8();
+    return QCoreApplication::translate("NmTr", source.constData(), 0,
+                                       QCoreApplication::UnicodeUTF8);
+}
+
 } // namespace nm
 
 /*!
  * 界面文案的统一写法。
  * 参数是 ASCII 十六进制串，内容是这段文本的 UTF-8 字节。
  */
-#define NmTr(hex) ::nm::nmFromHex(hex)
+#define NmTr(hex) ::nm::nmTranslateHex(hex)
 
 #endif // NM_TR_HPP

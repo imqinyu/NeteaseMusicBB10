@@ -510,8 +510,7 @@ TabbedPane {
                         rightPadding: ui.sdu(2)
                         topPadding: ui.sdu(2)
                         Label {
-                            text: qsTr("还没有曲目数据。先去「全部歌曲」页加载一次，"
-                                       + "这里就会按艺人归好类。")
+                            text: qsTr("还没有曲目数据。先去「全部歌曲」页加载一次，这里就会按艺人归好类。")
                             multiline: true
                             textStyle {
                                 base: SystemDefaults.TextStyles.BodyText

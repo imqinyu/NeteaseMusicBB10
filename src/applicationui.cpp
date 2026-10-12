@@ -17,6 +17,7 @@
 #include "applicationui.hpp"
 
 #include "MusicController.hpp"
+#include "nm/util/NmTr.hpp"
 
 #include <bb/cascades/Application>
 #include <bb/cascades/QmlDocument>
@@ -32,6 +33,7 @@
 #include <QDeclarativeError>
 #include <QNetworkProxyFactory>
 #include <QTranslator>
+#include <QSettings>
 #include <QTimer>
 #include <cstdio>
 
@@ -355,11 +357,18 @@ void ApplicationUI::registerQmlTypes()
 
 void ApplicationUI::onSystemLanguageChanged()
 {
+    // Language changes apply on next launch. Keep existing QML bindings and playback intact.
+    if (m_pMusic)
+        return;
     QCoreApplication::instance()->removeTranslator(m_pTranslator);
-    // Initiate, load and install the application translation files.
-    QString locale_string = QLocale().name();
-    QString file_name = QString("NeteaseMusic_%1").arg(locale_string);
-    if (m_pTranslator->load(file_name, "app/native/qm")) {
-        QCoreApplication::instance()->installTranslator(m_pTranslator);
+    const QString preference = QSettings().value(QLatin1String("nm/language"), QLatin1String("auto")).toString();
+    const bool chinese = nm::useChineseUi(preference, QLocale().name());
+    if (!chinese) {
+        if (m_pTranslator->load(QLatin1String("NeteaseMusic_en"), QLatin1String("app/native/qm")))
+            QCoreApplication::instance()->installTranslator(m_pTranslator);
+        else
+            qWarning("[LANG] English translation could not be loaded from app/native/qm");
     }
+    qWarning("[LANG] preference=%s system=%s effective=%s", qPrintable(preference),
+             qPrintable(QLocale().name()), chinese ? "zh" : "en");
 }

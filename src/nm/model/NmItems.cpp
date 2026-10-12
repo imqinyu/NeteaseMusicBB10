@@ -1,3 +1,4 @@
+#include "util/NmTr.hpp"
 #include "model/NmItems.hpp"
 
 #include <QLatin1String>
@@ -54,7 +55,7 @@ QString formatPlaylistDate(qint64 ms)
         return QString();
     // ★ 必须 fromUtf8：QLatin1String 会把「年/月/日」的 UTF-8 字节按 Latin-1
     //   解释，格式化出来就是 "2021å¹´11æœˆ3æ—¥" 这种乱码。
-    return dt.toString(QString::fromUtf8("yyyy年M月d日"));
+    return dt.toString(NmTr("79797979E5B9B44DE69C8864E697A5"));
 }
 }
 

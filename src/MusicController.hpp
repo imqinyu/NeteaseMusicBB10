@@ -432,6 +432,9 @@ public:
      * ★ 必须是 Q_INVOKABLE，否则 QML 里报 "music.setTheme is not a function"。
      */
     Q_INVOKABLE void setTheme(const QString &theme);
+    Q_PROPERTY(QString languagePreference READ languagePreference NOTIFY languagePreferenceChanged)
+    QString languagePreference() const;
+    Q_INVOKABLE void setLanguagePreference(const QString &language);
 
     /*! 独立页面请求打开「曲目页」：arg 是歌单 id（kind="playlist"） */
     Q_INVOKABLE void requestOpenPlaylist(const QString &id);
@@ -1050,6 +1053,7 @@ signals:
     void mvsChanged();
     void allSongsChanged();
     void mvUrlChanged();
+    void languagePreferenceChanged();
     void currentTrackChanged();
     void propertiesChanged();
     void playUrlChanged();

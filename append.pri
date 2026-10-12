@@ -61,6 +61,9 @@ for(NM_FILE, NM_LAYER_HEADERS) {
 
 message(NeteaseMusic: append.pri added $$size(NM_ADDED_SOURCES) source(s); total sources = $$size(SOURCES))
 
+# English fallback catalog. Chinese uses the original source strings.
+TRANSLATIONS += $$quote($$BASEDIR/translations/NeteaseMusic_en.ts)
+
 # ---------------------------------------------------------------------------
 # 1b) 二维码生成（扫码登录用）
 #
