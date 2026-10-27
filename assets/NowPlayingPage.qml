@@ -14,6 +14,7 @@
 
 import bb.cascades 1.4
 import bb.multimedia 1.0
+import bb.system 1.2
 
 Page {
     id: nowPlayingPage
@@ -105,6 +106,22 @@ Page {
             onTriggered: {
                 music.requestOpenQueue()
             }
+        },
+        ActionItem {
+            title: music.sleepTimerWaiting ? qsTr("睡眠定时器：等待当前曲目结束")
+                   : music.sleepTimerActive ? qsTr("睡眠定时器（剩余 %1 分钟）").arg(music.sleepTimerRemainingMinutes)
+                   : qsTr("睡眠定时器")
+            imageSource: "asset:///icons/ic_alarm.png"
+            ActionBar.placement: ActionBarPlacement.InOverflow
+            onTriggered: {
+                if (music.sleepTimerActive) {
+                    sleepStatus.show()
+                } else {
+                    sleepPrompt.inputField.defaultText = ""
+                    sleepPrompt.rememberMeChecked = music.sleepTimerWaitForEnd
+                    sleepPrompt.show()
+                }
+            }
         }
     ]
 
@@ -113,6 +130,38 @@ Page {
                             && music.currentTrack
                             && music.currentTrack.name !== undefined
                             && music.currentTrack.name.length > 0
+
+    attachedObjects: [
+        SystemPrompt {
+            id: sleepPrompt
+            title: qsTr("睡眠定时器")
+            body: qsTr("在设定时间后停止播放：")
+            inputField.emptyText: qsTr("时间（分钟）")
+            inputField.inputMode: SystemUiInputMode.NumericKeypad
+            inputField.maximumLength: 4
+            includeRememberMe: true
+            rememberMeText: qsTr("额外等待正在播放内容结束")
+            rememberMeChecked: false
+            confirmButton.label: qsTr("好")
+            cancelButton.label: qsTr("取消")
+            onFinished: {
+                if (result == SystemUiResult.ConfirmButtonSelection)
+                    music.startSleepTimer(inputFieldTextEntry(), rememberMeSelection())
+            }
+        },
+        SystemDialog {
+            id: sleepStatus
+            title: qsTr("睡眠定时器")
+            body: music.sleepTimerStatus
+            autoUpdateEnabled: true
+            confirmButton.label: qsTr("好")
+            cancelButton.label: qsTr("取消定时")
+            onFinished: {
+                if (result == SystemUiResult.CancelButtonSelection)
+                    music.cancelSleepTimer()
+            }
+        }
+    ]
 
     // 时间条用现成的 ProgressBar 组件（见页面底部），其内部自行维护时间标签。
 

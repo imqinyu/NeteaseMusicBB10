@@ -35,6 +35,8 @@
 #include <QUrl>          // coverImagePath 是 QUrl 属性，moc 需要完整类型
 #include <QVariantList>
 #include <QVariantMap>
+#include <QElapsedTimer>
+#include "util/NmSleepTimer.hpp"
 
 #include "api/NmApi.hpp"
 #include "model/NmItems.hpp"
@@ -627,6 +629,18 @@ public:
     /*! ★ 必须是 Q_INVOKABLE：设置页的 RadioGroup 要调它，
      *   漏了 Q_INVOKABLE 时 QML 里是 "music.setBitrate is not a function" */
     Q_INVOKABLE void setBitrate(int br);
+    Q_PROPERTY(bool sleepTimerActive READ sleepTimerActive NOTIFY sleepTimerChanged)
+    Q_PROPERTY(bool sleepTimerWaiting READ sleepTimerWaiting NOTIFY sleepTimerChanged)
+    Q_PROPERTY(bool sleepTimerWaitForEnd READ sleepTimerWaitForEnd NOTIFY sleepTimerChanged)
+    Q_PROPERTY(int sleepTimerRemainingMinutes READ sleepTimerRemainingMinutes NOTIFY sleepTimerChanged)
+    Q_PROPERTY(QString sleepTimerStatus READ sleepTimerStatus NOTIFY sleepTimerChanged)
+    bool sleepTimerActive() const { return m_sleepTimerState.active(); }
+    bool sleepTimerWaiting() const { return m_sleepTimerState.waiting(); }
+    bool sleepTimerWaitForEnd() const { return m_sleepTimerState.waitForEnd(); }
+    int sleepTimerRemainingMinutes() const;
+    QString sleepTimerStatus() const;
+    Q_INVOKABLE bool startSleepTimer(const QString &minutes, bool waitForEnd);
+    Q_INVOKABLE void cancelSleepTimer();
 
     /*! 设置是否隐藏 VIP 歌曲：写 QSettings 持久化 + 立即重填歌曲列表 */
     Q_INVOKABLE void setHideVip(bool hide);
@@ -1073,6 +1087,7 @@ signals:
     void loginChanged();
     void lastLoginErrorChanged();
     void bitrateChanged(int br);
+    void sleepTimerChanged();
     void themeChanged();
     void hideVipChanged();
     void openRequestChanged();
@@ -1084,6 +1099,7 @@ signals:
     void requestFinished(const QString &what, bool success);
 
 private slots:
+    void onSleepTimerTick();
     /*! 曲目变化后延迟补发通知，让异步封面缓存重新求值。 */
     void notifyCoverAgain();
     /*! 搜索防抖：停手 300ms 后才真正发请求（见 search()） */
@@ -1219,6 +1235,8 @@ private:
 
     /*! 按当前播放进度，把 m_currentLyricLine 更新到对应的那句歌词 */
     void updateLyricForPosition(int msec);
+    void finishSleepTimer();
+    bool interceptSleepTrackChange();
     void resetCurrentLyric(qint64 songId);
     void ensureCurrentLyric();
 
@@ -1308,6 +1326,12 @@ private:
      *   而连跳两首。起播新曲目（playIndex）时清回 false。
      */
     bool m_advanceHandled;
+    nm::NmSleepTimer m_sleepTimerState;
+    QElapsedTimer m_sleepTimerClock;
+    QTimer *m_sleepTimer;
+    int m_sleepLastMinutes;
+    bool m_sleepBlockPendingUrl;
+    int m_songUrlRequestId;
 
     /*! 列表快照（见 snapshotList / restoreList） */
     QVariantList m_snapshotSongs;

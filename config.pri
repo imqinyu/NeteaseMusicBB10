@@ -68,6 +68,7 @@ config_pri_assets {
         $$quote($$BASEDIR/assets/icons/ic_add.png) \
         $$quote($$BASEDIR/assets/icons/ic_add_contact.png) \
         $$quote($$BASEDIR/assets/icons/ic_add_to_play_next.png) \
+        $$quote($$BASEDIR/assets/icons/ic_alarm.png) \
         $$quote($$BASEDIR/assets/icons/ic_browser.png) \
         $$quote($$BASEDIR/assets/icons/ic_calendar_day.png) \
         $$quote($$BASEDIR/assets/icons/ic_chat_multiperson.png) \
@@ -145,6 +146,7 @@ config_pri_source_group1 {
         $$quote($$BASEDIR/src/nm/util/NmImageCache.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmJson.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmQrCode.hpp) \
+        $$quote($$BASEDIR/src/nm/util/NmSleepTimer.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmString.hpp) \
         $$quote($$BASEDIR/src/nm/util/NmTr.hpp) \
         $$quote($$BASEDIR/src/nm/util/qrcodegen/qrcodegen.h)

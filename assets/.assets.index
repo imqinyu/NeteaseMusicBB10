@@ -1,5 +1,5 @@
 1
-76
+77
 1440x1440/AppCover.qml
 720x720/AppCover.qml
 AboutPage.qml
@@ -18,6 +18,7 @@ icons/icon.png
 icons/ic_add.png
 icons/ic_add_contact.png
 icons/ic_add_to_play_next.png
+icons/ic_alarm.png
 icons/ic_browser.png
 icons/ic_calendar_day.png
 icons/ic_chat_multiperson.png

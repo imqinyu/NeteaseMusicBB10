@@ -483,6 +483,46 @@ Copy the MUSIC_U value (or the full cookie).</translation>
             <source>未在播放</source>
             <translation>Nothing is playing</translation>
         </message>
+        <message utf8="true">
+            <source>睡眠定时器</source>
+            <translation>Sleep timer</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时器：等待当前曲目结束</source>
+            <translation>Sleep timer: waiting for this track</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时器（剩余 %1 分钟）</source>
+            <translation>Sleep timer (%1 min remaining)</translation>
+        </message>
+        <message utf8="true">
+            <source>取消睡眠定时器</source>
+            <translation>Cancel sleep timer</translation>
+        </message>
+        <message utf8="true">
+            <source>在设定时间后停止播放：</source>
+            <translation>Stop playback after:</translation>
+        </message>
+        <message utf8="true">
+            <source>时间（分钟）</source>
+            <translation>Time (minutes)</translation>
+        </message>
+        <message utf8="true">
+            <source>额外等待正在播放内容结束</source>
+            <translation>Wait for the current track to finish</translation>
+        </message>
+        <message utf8="true">
+            <source>好</source>
+            <translation>OK</translation>
+        </message>
+        <message utf8="true">
+            <source>取消</source>
+            <translation>Cancel</translation>
+        </message>
+        <message utf8="true">
+            <source>取消定时</source>
+            <translation>Cancel timer</translation>
+        </message>
     </context>
     <context>
         <name>PlayerBar</name>
@@ -1588,6 +1628,62 @@ Copy the MUSIC_U value (or the full cookie).</translation>
         <message utf8="true">
             <source>顶层值之后还有内容</source>
             <translation>Unexpected content after the top-level value</translation>
+        </message>
+        <message utf8="true">
+            <source>请输入 1–1440 之间的整数分钟</source>
+            <translation>Enter a whole number of minutes from 1 to 1440</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时器已设为 %1 分钟</source>
+            <translation>Sleep timer set for %1 minutes</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时器已取消</source>
+            <translation>Sleep timer cancelled</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时结束，已暂停播放</source>
+            <translation>Sleep timer finished. Playback paused.</translation>
+        </message>
+        <message utf8="true">
+            <source>睡眠定时器未启动。</source>
+            <translation>The sleep timer is not running.</translation>
+        </message>
+        <message utf8="true">
+            <source>定时已到，将在当前曲目结束后停止播放。</source>
+            <translation>The timer has elapsed. Playback will stop when this track finishes.</translation>
+        </message>
+        <message utf8="true">
+            <source>正在播放：%1</source>
+            <translation>Current track: %1</translation>
+        </message>
+        <message utf8="true">
+            <source>将在 %1 到时，还剩 %2 分钟。</source>
+            <translation>Timer ends at %1, with %2 minutes remaining.</translation>
+        </message>
+        <message utf8="true">
+            <source>将在 %1 停止播放，还剩 %2 分钟。</source>
+            <translation>Playback stops at %1, with %2 minutes remaining.</translation>
+        </message>
+        <message utf8="true">
+            <source>预计播放到：%1</source>
+            <translation>Estimated final track: %1</translation>
+        </message>
+        <message utf8="true">
+            <source>到时后额外等待该曲目结束。</source>
+            <translation>That track will finish before playback stops.</translation>
+        </message>
+        <message utf8="true">
+            <source>随机播放，暂无法预计结束曲目。</source>
+            <translation>The final track cannot be predicted during shuffle playback.</translation>
+        </message>
+        <message utf8="true">
+            <source>曲目时长不足，暂无法预计结束曲目。</source>
+            <translation>The final track cannot be predicted because duration information is unavailable.</translation>
+        </message>
+        <message utf8="true">
+            <source>当前未播放，结束曲目暂无法确定。</source>
+            <translation>Nothing is playing. The final track cannot be predicted.</translation>
         </message>
     </context>
 </TS>

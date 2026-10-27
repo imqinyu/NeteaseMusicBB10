@@ -11,6 +11,7 @@
 #include <bb/multimedia/MediaPlayer>
 
 #include <QHash>
+#include <QDateTime>
 #include <QLatin1String>
 #include <QMap>
 #include <QPair>
@@ -189,6 +190,12 @@ MusicController::MusicController(QObject *parent)
     // ★ 不走初始化列表：插进列表里要同步改 hpp 的成员顺序，容易踩
     //   -Wreorder，这里直接赋值更省事
     m_advanceHandled = false;
+    m_sleepTimer = new QTimer(this);
+    m_sleepTimer->setInterval(1000);
+    m_sleepLastMinutes = 0;
+    m_sleepBlockPendingUrl = false;
+    m_songUrlRequestId = 0;
+    connect(m_sleepTimer, SIGNAL(timeout()), this, SLOT(onSleepTimerTick()));
     m_lyricSongId = 0;
     m_lyricRequestId = 0;
     m_propertiesLyricRequestId = 0;
@@ -1444,6 +1451,9 @@ bool MusicController::playFromAudioCache(qint64 songId)
 
 void MusicController::playIndex(int index)
 {
+    if (interceptSleepTrackChange())
+        return;
+    m_sleepBlockPendingUrl = false;
     /*
      * ★ 下标一律以【显示中的模型 m_songs】为准：
      *   播放列表页可以在当前列表里做关键词过滤（setListFilter），
@@ -1513,6 +1523,7 @@ void MusicController::playIndex(int index)
     if (songId == m_pendingSongUrlId)
         return;
     m_pendingSongUrlId = songId;
+    m_songUrlRequestId = 0;
 
     /*
      * ★★ 先查【本地音频缓存】：命中就直接播本地文件，根本不发网络请求。
@@ -1530,7 +1541,7 @@ void MusicController::playIndex(int index)
         return;
 
     setLoading(true);
-    m_api->fetchSongUrl(songId, m_session->bitrate());
+    m_songUrlRequestId = m_api->fetchSongUrl(songId, m_session->bitrate());
 }
 
 bool MusicController::playNextSong(const QVariantMap &song)
@@ -4367,6 +4378,16 @@ void MusicController::onPlaylistFinished(int requestId,
 void MusicController::onSongUrlFinished(int requestId, qint64 songId,
                                         const nm::NmParsers::SongUrlParse &result)
 {
+    if (requestId != m_songUrlRequestId)
+        return;
+    m_songUrlRequestId = 0;
+    m_pendingSongUrlId = 0;
+    onSleepTimerTick();
+    // A network reply must not restart audio after the sleep deadline paused it.
+    if (m_sleepBlockPendingUrl) {
+        finishRequest(QLatin1String("songUrl"), true);
+        return;
+    }
     Q_UNUSED(requestId);
     // songId 现在要用了：取地址失败时靠它查本地缓存（见下面两个分支）
 
@@ -4810,8 +4831,149 @@ void MusicController::loadMyProfile()
     m_api->fetchSubscribedArtists(20, 0);
 }
 
+int MusicController::sleepTimerRemainingMinutes() const
+{
+    return m_sleepTimerState.remaining(m_sleepTimerClock.isValid() ? m_sleepTimerClock.elapsed() : 0);
+}
+
+QString MusicController::sleepTimerStatus() const
+{
+    if (!m_sleepTimerState.active())
+        return NmTr("E79DA1E79CA0E5AE9AE697B6E599A8E69CAAE590AFE58AA8E38082");
+    const QString name = m_currentTrack.value(QLatin1String("name")).toString();
+    if (m_sleepTimerState.waiting())
+        return NmTr("E5AE9AE697B6E5B7B2E588B0EFBC8CE5B086E59CA8E5BD93E5898DE69BB2E79BAEE7BB93E69D9FE5908EE5819CE6ADA2E692ADE694BEE38082") + QLatin1Char('\n') + NmTr("E6ADA3E59CA8E692ADE694BEEFBC9A2531").arg(name);
+
+    const qint64 remaining = m_sleepTimerState.remainingMs(m_sleepTimerClock.elapsed());
+    const QString time = QDateTime::currentDateTime().addMSecs(remaining).toString(QLatin1String("HH:mm"));
+    QString text = (m_sleepTimerState.waitForEnd() ? NmTr("E5B086E59CA820253120E588B0E697B6EFBC8CE8BF98E589A920253220E58886E9929FE38082") : NmTr("E5B086E59CA820253120E5819CE6ADA2E692ADE694BEEFBC8CE8BF98E589A920253220E58886E9929FE38082"))
+            .arg(time).arg(sleepTimerRemainingMinutes());
+    if (!m_mediaPlayer || m_currentTrack.isEmpty()
+            || (m_mediaPlayer->mediaState() != bb::multimedia::MediaState::Started
+                && m_mediaPlayer->mediaState() != bb::multimedia::MediaState::Paused))
+        return text + QLatin1Char('\n') + NmTr("E5BD93E5898DE69CAAE692ADE694BEEFBC8CE7BB93E69D9FE69BB2E79BAEE69A82E697A0E6B395E7A1AEE5AE9AE38082");
+
+    QList<qint64> durations;
+    int current = m_currentIndex;
+    const bool queueMatches = current >= 0 && current < m_songs->size()
+            && m_songs->value(current).toMap().value(QLatin1String("id")) == m_currentTrack.value(QLatin1String("id"));
+    if (queueMatches) {
+        for (int i = 0; i < m_songs->size(); ++i)
+            durations.append(m_songs->value(i).toMap().value(QLatin1String("duration")).toLongLong());
+    } else {
+        // Browsing/filtering may replace the visible queue without stopping audio.
+        // Predict the current track only; do not pretend that the visible list is its queue.
+        current = 0;
+        durations.append(0);
+    }
+    const qint64 duration = m_mediaPlayer->duration() > 0 ? m_mediaPlayer->duration()
+            : m_currentTrack.value(QLatin1String("duration")).toLongLong();
+    durations[current] = duration;
+    const qint64 position = m_mediaPlayer->position();
+    nm::NmSleepTimer::Projection projection = nm::NmSleepTimer::project(
+            durations, current, position, remaining, m_repeatMode == 2, m_shuffle);
+    if (!queueMatches && remaining > qMax(qint64(0), duration - position) && m_repeatMode != 2)
+        projection.index = -1;
+    if (projection.index < 0)
+        return text + QLatin1Char('\n') + (m_shuffle ? NmTr("E99A8FE69CBAE692ADE694BEEFBC8CE69A82E697A0E6B395E9A284E8AEA1E7BB93E69D9FE69BB2E79BAEE38082") : NmTr("E69BB2E79BAEE697B6E995BFE4B88DE8B6B3EFBC8CE69A82E697A0E6B395E9A284E8AEA1E7BB93E69D9FE69BB2E79BAEE38082"));
+
+    const QString finalName = projection.index == current ? name
+            : m_songs->value(projection.index).toMap().value(QLatin1String("name")).toString();
+    text += QLatin1Char('\n') + NmTr("E9A284E8AEA1E692ADE694BEE588B0EFBC9A2531").arg(finalName);
+    if (m_sleepTimerState.waitForEnd())
+        text += QLatin1Char('\n') + NmTr("E588B0E697B6E5908EE9A29DE5A496E7AD89E5BE85E8AFA5E69BB2E79BAEE7BB93E69D9FE38082");
+    return text;
+}
+
+bool MusicController::startSleepTimer(const QString &text, bool waitForEnd)
+{
+    // A numeric keyboard is only a hint; reject pasted signs, decimals and other text.
+    const QString input = text.trimmed();
+    bool valid = !input.isEmpty();
+    for (int i = 0; i < input.size(); ++i)
+        valid = valid && input.at(i) >= QLatin1Char('0') && input.at(i) <= QLatin1Char('9');
+    bool converted = false;
+    const int minutes = input.toInt(&converted);
+    if (!valid || !converted || !m_sleepTimerState.start(minutes, waitForEnd)) {
+        notifyError(NmTr("E8AFB7E8BE93E585A52031E280933134343020E4B98BE997B4E79A84E695B4E695B0E58886E9929F"));
+        return false;
+    }
+    m_sleepTimerClock.start();
+    m_sleepLastMinutes = minutes;
+    m_sleepTimer->start();
+    emit sleepTimerChanged();
+    qWarning("[SLEEP] armed minutes=%d waitForEnd=%d", minutes, waitForEnd ? 1 : 0);
+    notifyError(NmTr("E79DA1E79CA0E5AE9AE697B6E599A8E5B7B2E8AEBEE4B8BA20253120E58886E9929F").arg(minutes));
+    return true;
+}
+
+void MusicController::cancelSleepTimer()
+{
+    if (!m_sleepTimerState.active())
+        return;
+    m_sleepTimerState.cancel();
+    m_sleepTimer->stop();
+    emit sleepTimerChanged();
+    qWarning("[SLEEP] cancelled");
+    notifyError(NmTr("E79DA1E79CA0E5AE9AE697B6E599A8E5B7B2E58F96E6B688"));
+}
+
+void MusicController::onSleepTimerTick()
+{
+    if (!m_sleepTimerState.active())
+        return;
+    const bool canFinish = m_mediaPlayer && !m_currentTrack.isEmpty()
+            && (m_mediaPlayer->mediaState() == bb::multimedia::MediaState::Started
+                || m_mediaPlayer->mediaState() == bb::multimedia::MediaState::Paused);
+    const nm::NmSleepTimer::Action action = m_sleepTimerState.tick(m_sleepTimerClock.elapsed(), canFinish);
+    if (action == nm::NmSleepTimer::Pause) {
+        finishSleepTimer();
+        return;
+    }
+    const int minutes = sleepTimerRemainingMinutes();
+    if (action == nm::NmSleepTimer::Wait) {
+        qWarning("[SLEEP] deadline reached; waiting for current track");
+    }
+    m_sleepLastMinutes = minutes;
+    emit sleepTimerChanged();
+}
+
+void MusicController::finishSleepTimer()
+{
+    m_sleepTimerState.cancel();
+    m_sleepTimer->stop();
+    m_sleepBlockPendingUrl = true;
+    m_songUrlRequestId = 0;
+    m_pendingSongUrlId = 0;
+    m_advanceHandled = true;
+    if (m_mediaPlayer && m_mediaPlayer->mediaState() == bb::multimedia::MediaState::Started)
+        m_mediaPlayer->pause();
+    emit sleepTimerChanged();
+    qWarning("[SLEEP] finished; playback paused, automatic next/repeat suppressed");
+    notifyError(NmTr("E79DA1E79CA0E5AE9AE697B6E7BB93E69D9FEFBC8CE5B7B2E69A82E5819CE692ADE694BE"));
+}
+
+bool MusicController::interceptSleepTrackChange()
+{
+    if (!m_sleepTimerState.active())
+        return false;
+    onSleepTimerTick();
+    if (!m_sleepTimerState.active())
+        return true;
+    if (!m_sleepTimerState.waiting())
+        return false;
+    // Skipping the track after the deadline also ends the current content.
+    finishSleepTimer();
+    return true;
+}
+
 void MusicController::playbackCompleted()
 {
+    // Check the deadline here as well: completion may arrive before the timer tick.
+    if (m_sleepTimerState.interceptCompletion(m_sleepTimerClock.isValid() ? m_sleepTimerClock.elapsed() : 0)) {
+        finishSleepTimer();
+        return;
+    }
     if (songCount() <= 0)
         return;
 
@@ -4859,6 +5021,7 @@ void MusicController::onAppThumbnailed()
 
 void MusicController::onAppForegrounded()
 {
+    onSleepTimerTick();
     qWarning("[LIFE] fullscreen (回前台) advanceHandled=%d",
              m_advanceHandled ? 1 : 0);
 
@@ -5331,6 +5494,10 @@ void MusicController::onRequestFailed(int requestId, const QString &tag,
                                       const QString &message,
                                       const QVariantMap &detail)
 {
+    if (requestId == m_songUrlRequestId) {
+        m_songUrlRequestId = 0;
+        m_pendingSongUrlId = 0;
+    }
     if (requestId == m_lyricRequestId) {
         m_lyricRequestId = 0;
         applyLyricFromCache(m_lyricSongId);
