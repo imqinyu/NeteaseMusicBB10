@@ -1,0 +1,77 @@
+Updating 'translations/NeteaseMusic_en.qm'...
+    Generated 339 translation(s) (339 finished and 0 unfinished)
+=== [arm/o.le-v7] qmake (release/device) ===
+Project MESSAGE: NeteaseMusic: append.pri added 0 source(s); total sources = 15
+=== [arm/o.le-v7] compile ===
+make[1]: Entering directory 'd:/BBWorkspace/NeteaseMusic/arm/o.le-v7'
+qcc -Vgcc_ntoarmv7le -c -Wc,-include -Wc,o.le-v7/.obj/NeteaseMusic -Wno-psabi -lang-c++ -fstack-protector -fstack-protector-all -mcpu=cortex-a9 -Wall -O2 -Wno-psabi -fstack-protector-strong -fvisibility=hidden -mthumb -Os -Wall -W -D_REENTRANT -fPIC -shared -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -o o.le-v7/.obj/MusicController.o ../../src/MusicController.cpp
+qcc -Vgcc_ntoarmv7le -c -Wc,-include -Wc,o.le-v7/.obj/NeteaseMusic -Wno-psabi -lang-c++ -fstack-protector -fstack-protector-all -mcpu=cortex-a9 -Wall -O2 -Wno-psabi -fstack-protector-strong -fvisibility=hidden -mthumb -Os -Wall -W -D_REENTRANT -fPIC -shared -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -o o.le-v7/.obj/applicationui.o ../../src/applicationui.cpp
+qcc -Vgcc_ntoarmv7le -c -Wc,-include -Wc,o.le-v7/.obj/NeteaseMusic -Wno-psabi -lang-c++ -fstack-protector -fstack-protector-all -mcpu=cortex-a9 -Wall -O2 -Wno-psabi -fstack-protector-strong -fvisibility=hidden -mthumb -Os -Wall -W -D_REENTRANT -fPIC -shared -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -o o.le-v7/.obj/NmImageCache.o ../../src/nm/util/NmImageCache.cpp
+C:/NDKFiles/host_10_3_1_12/win32/x86/usr/bin/moc.exe -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -D__QNXNTO__ ../../src/MusicController.hpp -o o.le-v7/.moc/moc_MusicController.cpp
+C:/NDKFiles/host_10_3_1_12/win32/x86/usr/bin/moc.exe -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -D__QNXNTO__ ../../src/nm/util/NmImageCache.hpp -o o.le-v7/.moc/moc_NmImageCache.cpp
+qcc -Vgcc_ntoarmv7le -c -Wc,-include -Wc,o.le-v7/.obj/NeteaseMusic -Wno-psabi -lang-c++ -fstack-protector -fstack-protector-all -mcpu=cortex-a9 -Wall -O2 -Wno-psabi -fstack-protector-strong -fvisibility=hidden -mthumb -Os -Wall -W -D_REENTRANT -fPIC -shared -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -o o.le-v7/.obj/moc_MusicController.o o.le-v7/.moc/moc_MusicController.cpp
+In file included from ../../src/nm/api/NmApi.hpp:26:0,
+                 from ../../src/MusicController.hpp:41,
+                 from ../../src/applicationui.cpp:19:
+../../src/nm/model/NmParsers.hpp:233:59: warning: "/*" within comment [-Wcomment]
+../../src/nm/model/NmParsers.hpp:234:86: warning: "/*" within comment [-Wcomment]
+In file included from ../../src/nm/api/NmApi.hpp:26:0,
+                 from ../../src/MusicController.hpp:41,
+                 from ../../src/MusicController.cpp:1:
+../../src/nm/model/NmParsers.hpp:233:59: warning: "/*" within comment [-Wcomment]
+../../src/nm/model/NmParsers.hpp:234:86: warning: "/*" within comment [-Wcomment]
+In file included from ../../src/nm/api/NmApi.hpp:26:0,
+                 from o.le-v7/.moc/../../../../src/MusicController.hpp:41,
+                 from o.le-v7/.moc/moc_MusicController.cpp:9:
+../../src/nm/model/NmParsers.hpp:233:59: warning: "/*" within comment [-Wcomment]
+../../src/nm/model/NmParsers.hpp:234:86: warning: "/*" within comment [-Wcomment]
+qcc -Vgcc_ntoarmv7le -c -Wc,-include -Wc,o.le-v7/.obj/NeteaseMusic -Wno-psabi -lang-c++ -fstack-protector -fstack-protector-all -mcpu=cortex-a9 -Wall -O2 -Wno-psabi -fstack-protector-strong -fvisibility=hidden -mthumb -Os -Wall -W -D_REENTRANT -fPIC -shared -DQT_NO_IMPORT_QT47_QML -DQ_OS_BLACKBERRY -DNM_HAVE_ZLIB -D_FORTIFY_SOURCE=2 -DQT_NO_DEBUG -DQT_DECLARATIVE_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_SHARED -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/share/qt4/mkspecs/blackberry-armv7le-qcc -I../../../NeteaseMusic -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtCore -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtNetwork -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4/QtDeclarative -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/qt4 -I../../src -I../../src/nm -Io.le-v7/.moc -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/bb1 -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include -Ic:/NDKFiles/target_10_3_1_995/qnx6/usr/include/freetype2 -I. -o o.le-v7/.obj/moc_NmImageCache.o o.le-v7/.moc/moc_NmImageCache.cpp
+../../src/MusicController.hpp: In constructor 'MusicController::MusicController(QObject*)':
+../../src/MusicController.hpp:1433:35: warning: 'MusicController::m_songs' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1368:35: warning:   'bb::cascades::ArrayDataModel* MusicController::m_browseSongs' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1589:9: warning: 'MusicController::m_accountsVersion' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1507:35: warning:   'bb::cascades::GroupDataModel* MusicController::m_libraryArtists' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1508:9: warning: 'MusicController::m_libraryArtistsVersion' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1450:35: warning:   'bb::cascades::ArrayDataModel* MusicController::m_discoverPlaylists' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1523:10: warning: 'MusicController::m_commentsAutoOpen' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1461:35: warning:   'bb::cascades::ArrayDataModel* MusicController::m_artists' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1511:9: warning: 'MusicController::m_mvRequestId' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1459:12: warning:   'qint64 MusicController::m_currentMvId' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1560:9: warning: 'MusicController::m_propertiesVersion' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1551:9: warning:   'int MusicController::m_coverEvalCount' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1551:9: warning: 'MusicController::m_coverEvalCount' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:613:13: warning:   'QString MusicController::m_coverDiagPath' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1609:9: warning: 'MusicController::m_openRequestVersion' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1341:10: warning:   'bool MusicController::m_hasSnapshot' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1565:10: warning: 'MusicController::m_shuffle' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1500:10: warning:   'bool MusicController::m_enqueueAlbumMode' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1500:10: warning: 'MusicController::m_enqueueAlbumMode' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1348:10: warning:   'bool MusicController::m_queueAdopted' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+../../src/MusicController.hpp:1606:10: warning: 'MusicController::m_hideVip' will be initialized after [-Wreorder]
+../../src/MusicController.hpp:1573:13: warning:   'QTimer* MusicController::m_positionTimer' [-Wreorder]
+../../src/MusicController.cpp:93:1: warning:   when initialized here [-Wreorder]
+rm -f libNeteaseMusic.so.1.0.0 libNeteaseMusic.so libNeteaseMusic.so.1 libNeteaseMusic.so.1.0
+qcc -Vgcc_ntoarmv7le -lang-c++ -Wl,-rpath-link,C:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/lib -Wl,-rpath-link,C:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib -Wl,-rpath-link,C:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib/qt4/lib -Wl,-O1 -Wl,-rpath-link,C:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib/qt4/lib -Wl,-z,relro -Wl,-soname,NeteaseMusic.so -shared -Wl,-z,relro -Wl,-z,now -o libNeteaseMusic.so.1.0.0 o.le-v7/.obj/MusicController.o o.le-v7/.obj/applicationui.o o.le-v7/.obj/main.o o.le-v7/.obj/NmApi.o o.le-v7/.obj/NmItems.o o.le-v7/.obj/NmParsers.o o.le-v7/.obj/NmCookieStore.o o.le-v7/.obj/NmHttpClient.o o.le-v7/.obj/NmSession.o o.le-v7/.obj/NmAudioCache.o o.le-v7/.obj/NmImageCache.o o.le-v7/.obj/NmJson.o o.le-v7/.obj/NmQrCode.o o.le-v7/.obj/NmString.o o.le-v7/.obj/qrcodegen.o o.le-v7/.obj/moc_MusicController.o o.le-v7/.obj/moc_applicationui.o o.le-v7/.obj/moc_NmApi.o o.le-v7/.obj/moc_NmHttpClient.o o.le-v7/.obj/moc_NmSession.o o.le-v7/.obj/moc_NmAudioCache.o o.le-v7/.obj/moc_NmImageCache.o   -LC:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib/bb1 -LC:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/lib -LC:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib -LC:\NDKFiles\target_10_3_1_995\qnx6/armle-v7/usr/lib/qt4/lib -LC:\NDKFiles\target_10_3_1_995\qnx6//usr/lib/qt4/lib -lbbmultimedia -lbbsystem -lbbcascades -lQtDeclarative -lQtScript -lQtSvg -lQtSql -lsqlite3 -lz -lQtXmlPatterns -lQtGui -lQtNetwork -lsocket -lQtCore -lm -lbps  
+ln -s libNeteaseMusic.so.1.0.0 libNeteaseMusic.so
+ln -s libNeteaseMusic.so.1.0.0 libNeteaseMusic.so.1
+ln -s libNeteaseMusic.so.1.0.0 libNeteaseMusic.so.1.0
+rm -f o.le-v7/libNeteaseMusic.so.1.0.0
+rm -f o.le-v7/libNeteaseMusic.so
+rm -f o.le-v7/libNeteaseMusic.so.1
+rm -f o.le-v7/libNeteaseMusic.so.1.0
+mv -f libNeteaseMusic.so.1.0.0 libNeteaseMusic.so libNeteaseMusic.so.1 libNeteaseMusic.so.1.0 o.le-v7/
+echo && ntoarm-objcopy --only-keep-debug o.le-v7/libNeteaseMusic.so.1.0.0 o.le-v7/NeteaseMusic.so.sym && ntoarm-objcopy --strip-all -R.ident --add-gnu-debuglink o.le-v7/NeteaseMusic.so.sym o.le-v7/libNeteaseMusic.so.1.0.0 o.le-v7/NeteaseMusic.so
+
+make[1]: Leaving directory 'd:/BBWorkspace/NeteaseMusic/arm/o.le-v7'
+fix-release-artifact: 宸叉惉绉?2 涓枃浠跺埌 arm/o.le-v7/
+=== [Device-Release] artifact: arm/o.le-v7/NeteaseMusic.so ===

@@ -1,0 +1,12 @@
+OK
+OK 1422467233
+ServerContext::onFontSizeChanged
+BENCH started active=2 queued=22 dir=/accounts/1000/appdata/com.fremantle.NmImagePerf.testDev_NmImagePerfc58abfd6/data/nm-image-bench
+BENCH ready=24 elapsed_ms=6298 pulses=370 max_gap_ms=253 p95_gap_ms=104
+slogger2 buffer handle not initialized. /var/build/workspace/src/rim/lgmon/lib/lgmon/lgmon_api.c, countersCallback(), around line 1001!
+slogger2 buffer handle not initialized. /var/build/workspace/src/rim/lgmon/lib/lgmon/lgmon_api.c, countersCallback(), around line 1001!
+      PID           NAME  MSEC PIDS  SYS       MEMORY
+
+
+b'QCONN\r\n'
+b'\xff\xfd"'

@@ -1,0 +1,13 @@
+********* Start testing of ImageCacheTest *********
+Config: Using QTest library 4.8.1, Qt 4.8.1
+PASS   : ImageCacheTest::initTestCase()
+PASS   : ImageCacheTest::scaledImageAndDiskReuse()
+PASS   : ImageCacheTest::clearWhileBusyAndReload()
+PASS   : ImageCacheTest::badResponseIsNotPublished()
+PASS   : ImageCacheTest::emptyOldCacheFileIsReplaced()
+QWARN  : ImageCacheTest::oversizedResponseIsRejected() NmImageCache: network error code=5 url=http://127.0.0.1:54245/large.jpg
+QWARN  : ImageCacheTest::oversizedResponseIsRejected() NmImageCache: download failed url=http://127.0.0.1:54245/large.jpg status=200 err=5
+PASS   : ImageCacheTest::oversizedResponseIsRejected()
+PASS   : ImageCacheTest::cleanupTestCase()
+Totals: 7 passed, 0 failed, 0 skipped
+********* Finished testing of ImageCacheTest *********

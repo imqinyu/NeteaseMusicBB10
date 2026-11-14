@@ -1,4 +1,4 @@
-#include "MusicController.hpp"
+﻿#include "MusicController.hpp"
 
 #include <bb/cascades/AbstractPane>
 #include <bb/cascades/Application>
@@ -23,6 +23,7 @@
 #include "util/NmAudioCache.hpp"
 #include <QStringList>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -150,6 +151,10 @@ MusicController::MusicController(QObject *parent)
     , m_imageRefreshPending(false)
     , m_scrolling(false)
     , m_imageRefreshTimer(new QTimer(this))
+    , m_imageNotifyPending(false)
+    , m_imageRefreshAgain(false)
+    , m_imageRefreshTarget(0)
+    , m_imageRefreshRow(0)
     , m_playlistInfoVersion(0)
     , m_currentTrackVersion(0)
     , m_currentIndex(-1)
@@ -4798,20 +4803,12 @@ void MusicController::onUserPlaylistsFinished(
 
 void MusicController::onImageReady()
 {
-    ++m_imageCacheVersion;
-    emit imageCacheChanged();
-    emit coverInfoChanged();
-
+    m_imageNotifyPending = true;
     if (m_imageRefreshPending)
-        return;                     // 已排程，多次完成合并成一次
+        m_imageRefreshAgain = true;
     m_imageRefreshPending = true;
-
-    // ★ 滚动中不刷新模型：边滚边 replace() 会让滑动明显卡顿。
-    //   标记留着，滚动停止（setScrolling(false)）时立刻补一次。
-    if (m_scrolling)
-        return;
-
-    m_imageRefreshTimer->start();
+    if (!m_imageRefreshTimer->isActive())
+        m_imageRefreshTimer->start(80);
 }
 
 void MusicController::loadMyProfile()
@@ -5388,106 +5385,94 @@ void MusicController::setScrolling(bool scrolling)
 
     // 刚滚完：把攒下的刷新补上
     if (!m_scrolling && m_imageRefreshPending)
-        m_imageRefreshTimer->start();
+        m_imageRefreshTimer->start(80);
 }
 
-/*!
- * 把 GroupDataModel 里各条的 localKey 刷成最新下好的本地路径。
- * ★ 先收集、再统一 updateItem：边遍历边改模型容易踩到顺序变化。
- */
-static void nmRefreshGroupImages(nm::NmImageCache *cache,
-                                 bb::cascades::GroupDataModel *model,
-                                 const char *remoteKey, const char *localKey)
-{
-    if (!cache || !model)
-        return;
-
-    const QString remoteK = QLatin1String(remoteKey);
-    const QString localK = QLatin1String(localKey);
-
-    QList<QPair<QVariantList, QVariantMap> > updates;
-    for (QVariantList ip = model->first(); !ip.isEmpty(); ip = model->after(ip)) {
-        const QVariantMap map = model->data(ip).toMap();
-        const QString remote = map.value(remoteK).toString();
-        if (remote.isEmpty())
-            continue;
-        const QString fresh = cache->pathFor(remote);
-        if (fresh.isEmpty() || fresh == map.value(localK).toString())
-            continue;
-        QVariantMap updated = map;
-        updated.insert(localK, fresh);
-        updates.append(qMakePair(ip, updated));
-    }
-    for (int i = 0; i < updates.size(); ++i)
-        model->updateItem(updates.at(i).first, updates.at(i).second);
-}
-
+// Bound model work to a small slice of the GUI event loop. Re-read every
+// model at each slice, since navigation may replace its contents between ticks.
 void MusicController::refreshImagePaths()
 {
-    m_imageRefreshPending = false;
+    if (m_imageNotifyPending) {
+        m_imageNotifyPending = false;
+        ++m_imageCacheVersion;
+        emit imageCacheChanged();
+        emit coverInfoChanged();
+    }
+    if (m_scrolling)
+        return;
 
     struct Target { ArrayDataModel *model; const char *remoteKey; const char *localKey; };
     const Target targets[] = {
-        { m_songs,             "artUrl",        "localArtPath"    },
-        { m_playlists,         "coverUrl",      "localCoverPath"  },
-        { m_discoverPlaylists, "coverUrl",      "localCoverPath"  },
-        { m_comments,          "userAvatarUrl", "localAvatarPath" },
-        { m_artists,           "picUrl",        "localPicPath"    },
-        { m_mvs,               "coverUrl",      "localCoverPath"  },
-        { m_albums,            "artUrl",        "localCoverPath"  },
-        // 后加的两个：不列在这里的话，图下完了模型里那条 localXxx 也永远是空
-        { m_otherAccounts,     "avatarUrl",     "localAvatarPath" },
-        /*
-         * ★★ 后加的这几个模型也必须列进来，否则封面/头像下完了
-         *   它们那条 localXxx 永远是空 —— 表现就是"列表里封面加载不出来"：
-         *     m_browseSongs    歌单 / 专辑 / 搜索结果页（之前一直没图）
-         *     m_artistSongs    艺人页「热门」（有的有图有的没有）
-         *     m_recommendSongs 每日推荐
-         */
-        { m_browseSongs,       "artUrl",        "localArtPath"    },
-        { m_searchSongs,       "artUrl",        "localArtPath"    },
-        { m_artistSongs,       "artUrl",        "localArtPath"    },
-        { m_recommendSongs,    "artUrl",        "localArtPath"    }
+        { m_songs, "artUrl", "localArtPath" },
+        { m_playlists, "coverUrl", "localCoverPath" },
+        { m_discoverPlaylists, "coverUrl", "localCoverPath" },
+        { m_comments, "userAvatarUrl", "localAvatarPath" },
+        { m_artists, "picUrl", "localPicPath" },
+        { m_mvs, "coverUrl", "localCoverPath" },
+        { m_albums, "artUrl", "localCoverPath" },
+        { m_otherAccounts, "avatarUrl", "localAvatarPath" },
+        { m_browseSongs, "artUrl", "localArtPath" },
+        { m_searchSongs, "artUrl", "localArtPath" },
+        { m_artistSongs, "artUrl", "localArtPath" },
+        { m_recommendSongs, "artUrl", "localArtPath" }
     };
-    const int targetCount = (int)(sizeof(targets) / sizeof(targets[0]));
-
-    for (int t = 0; t < targetCount; ++t) {
-        ArrayDataModel *model = targets[t].model;
-        if (!model)
-            continue;
-        const QString remoteKey = QLatin1String(targets[t].remoteKey);
-        const QString localKey = QLatin1String(targets[t].localKey);
-
-        /*
-         * 每次都重新读 size() 并在循环里逐次校验（延迟执行期间
-         * 模型可能被翻页/重查改变长度，越界 replace 是内存破坏）。
-         */
-        for (int i = 0; i < model->size(); ++i) {
-            const QVariantMap map = model->value(i).toMap();
-            const QString remote = map.value(remoteKey).toString();
-            if (remote.isEmpty())
+    const int count = int(sizeof(targets) / sizeof(targets[0]));
+    QElapsedTimer budget;
+    budget.start();
+    int visited = 0;
+    while (m_imageRefreshTarget < count + 2 && visited < 64 && budget.elapsed() < 4) {
+        if (m_imageRefreshTarget < count) {
+            const Target &target = targets[m_imageRefreshTarget];
+            if (!target.model || m_imageRefreshRow >= target.model->size()) {
+                ++m_imageRefreshTarget;
+                m_imageRefreshRow = 0;
                 continue;
-
-            const QString fresh = m_imageCache->pathFor(remote);
-            if (fresh.isEmpty())
-                continue;                       // 还没下完，保持原样
-            if (fresh == map.value(localKey).toString())
-                continue;                       // 没变化，不用动
-
-            QVariantMap updated = map;
-            updated.insert(localKey, fresh);
-            if (i < model->size())
-                model->replace(i, updated);
+            }
+            const int row = m_imageRefreshRow++;
+            QVariantMap map = target.model->value(row).toMap();
+            const QString remote = map.value(QLatin1String(target.remoteKey)).toString();
+            const QString localKey = QLatin1String(target.localKey);
+            const QString fresh = remote.isEmpty() ? QString() : m_imageCache->pathFor(remote);
+            if (!fresh.isEmpty() && fresh != map.value(localKey).toString()) {
+                map.insert(localKey, fresh);
+                if (row < target.model->size())
+                    target.model->replace(row, map);
+            }
+        } else {
+            const bool artists = m_imageRefreshTarget == count;
+            GroupDataModel *model = artists ? m_libraryArtists : m_libraryPlaylists;
+            if (m_imageRefreshRow == 0)
+                m_imageRefreshGroupPath = model->first();
+            if (m_imageRefreshGroupPath.isEmpty()) {
+                ++m_imageRefreshTarget;
+                m_imageRefreshRow = 0;
+                continue;
+            }
+            const QVariantList path = m_imageRefreshGroupPath;
+            m_imageRefreshGroupPath = model->after(path);
+            ++m_imageRefreshRow;
+            QVariantMap map = model->data(path).toMap();
+            const QString remote = map.value(artists ? QLatin1String("artUrl") : QLatin1String("coverUrl")).toString();
+            const QString key = QLatin1String("localCoverPath");
+            const QString fresh = remote.isEmpty() ? QString() : m_imageCache->pathFor(remote);
+            if (!fresh.isEmpty() && fresh != map.value(key).toString()) {
+                map.insert(key, fresh);
+                model->updateItem(path, map);
+            }
         }
+        ++visited;
     }
-
-    /*
-     * 资料库那两个 GroupDataModel（艺术家 / 歌单）类型对不上上面那张
-     * ArrayDataModel 表，单独刷一遍 —— 否则图下完了模型里那条
-     * localCoverPath 也永远是空。
-     */
-    nmRefreshGroupImages(m_imageCache, m_libraryArtists, "artUrl", "localCoverPath");
-    nmRefreshGroupImages(m_imageCache, m_libraryPlaylists, "coverUrl", "localCoverPath");
+    if (m_imageRefreshTarget < count + 2) {
+        m_imageRefreshTimer->start(0);
+        return;
+    }
+    m_imageRefreshTarget = 0;
+    m_imageRefreshRow = 0;
+    m_imageRefreshGroupPath.clear();
+    m_imageRefreshPending = m_imageRefreshAgain;
+    m_imageRefreshAgain = false;
+    if (m_imageRefreshPending)
+        m_imageRefreshTimer->start(80);
 }
 
 void MusicController::onRequestFailed(int requestId, const QString &tag,

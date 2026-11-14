@@ -1,0 +1,36 @@
+OK 1417523295
+ServerContext::onFontSizeChanged
+BENCH started active=2 queued=22 dir=/accounts/1000/appdata/com.fremantle.NmImagePerf.testDev_NmImagePerfc58abfd6/data/nm-image-bench
+BENCH ready=24 elapsed_ms=19421 pulses=52 max_gap_ms=5249 p95_gap_ms=635
+slogger2 buffer handle not initialized. /var/build/workspace/src/rim/lgmon/lib/lgmon/lgmon_api.c, countersCallback(), around line 1001!
+slogger2 buffer handle not initialized. /var/build/workspace/src/rim/lgmon/lib/lgmon/lgmon_api.c, countersCallback(), around line 1001!
+tcp        0      0  127.0.0.1.8765         127.0.0.1.39583        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.39221        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.38903        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.38550        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.38280        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37881        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37685        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37612        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37328        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37128        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.37034        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.36543        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.36475        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.36182        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.35715        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.35355        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.35241        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.34809        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.34635        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.34380        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.33961        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.33871        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.33398        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         127.0.0.1.32968        TIME_WAIT  
+tcp        0      0  127.0.0.1.8765         *.*                    LISTEN     
+      PID           NAME  MSEC PIDS  SYS       MEMORY
+
+
+b'QCONN\r\n\xff\xfd"'
+b'OK\r\n'

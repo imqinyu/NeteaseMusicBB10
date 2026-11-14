@@ -5,6 +5,10 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QBuffer>
+#include <QFutureWatcher>
+#include <QtConcurrentRun>
+#include <QtGui/QImageReader>
 // 写成 QtGui/QImage：工程里只配了 QT += network，QtGui 的 include 路径
 // 不一定被加进来，但 .../include/qt4 一定在，用全路径最稳。
 #include <QtGui/QImage>
@@ -27,6 +31,35 @@ namespace {
  *   再补 —— 它每完成一张图就跑一遍，会持续把队列喂满。
  */
 static const int kMaxQueue = 150;
+static const qint64 kMaxDownloadBytes = 16 * 1024 * 1024;
+
+// This function runs in the thread pool. It owns all its data and never touches
+// a model, a network reply or the cache object on the GUI thread.
+bool writeImage(const QByteArray &body, const QString &path, int maxSize)
+{
+    if (maxSize <= 0) {
+        QFile file(path);
+        return file.open(QIODevice::WriteOnly) && file.write(body) == body.size();
+    }
+    QBuffer buffer;
+    buffer.setData(body);
+    buffer.open(QIODevice::ReadOnly);
+    QImageReader reader(&buffer);
+    const QSize size = reader.size();
+    if (!size.isValid() || qint64(size.width()) * size.height() > 64 * 1024 * 1024)
+        return false;
+    if (size.width() > maxSize || size.height() > maxSize) {
+        QSize scaled = size;
+        scaled.scale(maxSize, maxSize, Qt::KeepAspectRatio);
+        reader.setScaledSize(scaled);
+    }
+    QImage image = reader.read();
+    if (image.isNull())
+        return false;
+    if (image.width() > maxSize || image.height() > maxSize)
+        image = image.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+    return image.save(path, "JPG", 80);
+}
 
 /*!
  * 把本地绝对路径转成 file:// URL。
@@ -102,6 +135,7 @@ NmImageCache::NmImageCache(QObject *parent)
     , m_maxImageSize(160)
     , m_verbose(false)
     , m_wired(false)
+    , m_generation(0)
 {
     // 图片下载不需要 cookie jar
     m_manager->setCookieJar(0);
@@ -113,6 +147,10 @@ NmImageCache::NmImageCache(QObject *parent)
 
 NmImageCache::~NmImageCache()
 {
+    foreach (QFutureWatcher<bool> *job, m_processing) {
+        job->waitForFinished();
+        QFile::remove(job->property("nmTemporaryPath").toString());
+    }
 }
 
 void NmImageCache::cancelQueued()
@@ -130,6 +168,18 @@ void NmImageCache::cancelQueued()
 
 int NmImageCache::clear()
 {
+    ++m_generation;
+    const QList<QNetworkReply *> active = m_active.values();
+    m_active.clear();
+    m_queue.clear();
+    m_requested.clear();
+    m_done.clear();
+    m_failed.clear();
+    m_retried.clear();
+    foreach (QNetworkReply *reply, active) {
+        if (reply)
+            reply->abort();
+    }
     const QString dir = ensureCacheDir();
     QDir d(dir);
     int removed = 0;
@@ -143,17 +193,6 @@ int NmImageCache::clear()
     }
 
     // 正在下载的也一并放弃，避免回到旧状态后路径错乱
-    foreach (QNetworkReply *reply, m_active.values()) {
-        if (reply) {
-            reply->abort();
-            reply->deleteLater();
-        }
-    }
-    m_active.clear();
-    m_queue.clear();
-    m_requested.clear();
-    m_done.clear();
-
     return removed;
 }
 
@@ -178,6 +217,8 @@ void NmImageCache::setMaxConcurrent(int n)
 
 QString NmImageCache::ensureCacheDir() const
 {
+    if (!m_effectiveDir.isEmpty())
+        return m_effectiveDir;
     QString base = m_cacheDir;
     /*
      * ★★ 必须用【持久目录】，不能用 QDir::tempPath()！
@@ -270,7 +311,7 @@ QString NmImageCache::pathFor(const QString &urlIn)
 
 void NmImageCache::pumpQueue()
 {
-    while (!m_queue.isEmpty() && m_active.size() < m_maxConcurrent)
+    while (!m_queue.isEmpty() && m_active.size() + m_processing.size() < m_maxConcurrent)
         startDownload(m_queue.takeFirst());
 }
 
@@ -310,7 +351,10 @@ void NmImageCache::startDownload(const QString &url)
 
     reply->setProperty("nmUrl", url);
     reply->setProperty("nmPath", path);
+    reply->setProperty("nmGeneration", m_generation);
     m_active.insert(url, reply);
+    connect(reply, SIGNAL(downloadProgress(qint64,qint64)),
+            this, SLOT(onDownloadProgress(qint64,qint64)));
 
     if (m_verbose)
         qWarning("NmImageCache: downloading (parallel %d/%d) -> %s",
@@ -411,6 +455,10 @@ void NmImageCache::onFinished(QNetworkReply *reply)
         qWarning("NmImageCache: finished with null reply");
         return;
     }
+    if (reply->property("nmGeneration").toInt() != m_generation) {
+        reply->deleteLater();
+        return;
+    }
 
     const QString url = reply->property("nmUrl").toString();
     const QString path = reply->property("nmPath").toString();
@@ -419,7 +467,7 @@ void NmImageCache::onFinished(QNetworkReply *reply)
     const QByteArray body = reply->readAll();
     const bool ok = (netError == QNetworkReply::NoError)
                     && (status == 200 || status == 0)
-                    && !body.isEmpty();
+                    && !body.isEmpty() && body.size() <= kMaxDownloadBytes;
     reply->deleteLater();
 
     m_active.remove(url);
@@ -447,43 +495,51 @@ void NmImageCache::onFinished(QNetworkReply *reply)
         return;
     }
 
-    /*
-     * 落盘前缩小（见 setMaxImageSize 的说明）。
-     * 解码失败（非图片内容/格式不支持）就直接写原始字节，
-     * 保证功能不死 —— 最多是慢一点。
-     */
-    bool written = false;
-    if (m_maxImageSize > 0) {
-        QImage img;
-        if (img.loadFromData(body)) {
-            const QSize size = img.size();
-            if (size.width() > m_maxImageSize || size.height() > m_maxImageSize) {
-                img = img.scaled(m_maxImageSize, m_maxImageSize,
-                                 Qt::KeepAspectRatio, Qt::FastTransformation);
-            }
-            written = img.save(path, "JPG", 80);
-            if (m_verbose && written) {
-                qWarning("NmImageCache: %dx%d -> %dx%d  %s",
-                         size.width(), size.height(),
-                         img.width(), img.height(), qPrintable(path));
-            }
+    // Keep the concurrency slot until decoding and writing have finished.
+    // Publish only the complete file, so clearing a cache cannot resurrect it.
+    QFutureWatcher<bool> *job = new QFutureWatcher<bool>(this);
+    const QString temporary = path + QLatin1String(".pending-")
+            + QString::number(m_generation);
+    job->setProperty("nmUrl", url);
+    job->setProperty("nmPath", path);
+    job->setProperty("nmTemporaryPath", temporary);
+    job->setProperty("nmGeneration", m_generation);
+    m_processing.insert(job);
+    connect(job, SIGNAL(finished()), this, SLOT(onImageProcessed()));
+    job->setFuture(QtConcurrent::run(writeImage, body, temporary, m_maxImageSize));
+    pumpQueue();
+}
+
+void NmImageCache::onDownloadProgress(qint64 received, qint64 total)
+{
+    if (received > kMaxDownloadBytes || total > kMaxDownloadBytes) {
+        QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
+        if (reply)
+            reply->abort();
+    }
+}
+
+void NmImageCache::onImageProcessed()
+{
+    QFutureWatcher<bool> *job = static_cast<QFutureWatcher<bool> *>(sender());
+    if (!job || !m_processing.remove(job))
+        return;
+    const QString url = job->property("nmUrl").toString();
+    const QString path = job->property("nmPath").toString();
+    const QString temporary = job->property("nmTemporaryPath").toString();
+    if (job->property("nmGeneration").toInt() == m_generation) {
+        m_requested.remove(url);
+        if (QFileInfo(path).exists() && QFileInfo(path).size() == 0)
+            QFile::remove(path);
+        if (job->result() && QFile::rename(temporary, path)) {
+            m_done.insert(url, path);
+            emit ready();
+        } else {
+            m_failed.insert(url);
         }
     }
-
-    if (!written) {
-        QFile f(path);
-        if (!f.open(QIODevice::WriteOnly)) {
-            qWarning("NmImageCache: cannot write %s", qPrintable(path));
-            m_requested.remove(url);
-            pumpQueue();
-            return;
-        }
-        f.write(body);
-        f.close();
-    }
-
-    m_done.insert(url, path);
-    emit ready();
+    QFile::remove(temporary);
+    job->deleteLater();
     pumpQueue();
 }
 

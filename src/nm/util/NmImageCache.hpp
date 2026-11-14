@@ -32,6 +32,7 @@
 #include <QSslError>
 
 class QNetworkAccessManager;
+template <typename T> class QFutureWatcher;
 
 namespace nm {
 
@@ -69,7 +70,7 @@ public:
     qint64 cacheSizeBytes() const;
 
     /*! 覆盖缓存目录（测试用）。为空时用系统临时目录。 */
-    void setCacheDir(const QString &dir) { m_cacheDir = dir; }
+    void setCacheDir(const QString &dir) { m_cacheDir = dir; m_effectiveDir.clear(); }
     QString cacheDir() const { return m_effectiveDir.isEmpty() ? m_cacheDir
                                                               : m_effectiveDir; }
 
@@ -126,6 +127,8 @@ private slots:
     void onReplyError(QNetworkReply::NetworkError code);
     /*! SSL 握手错误：打日志 + 忽略（BB10 根证书库较旧，封面是公开资源） */
     void onReplySslErrors(const QList<QSslError> &errors);
+    void onImageProcessed();
+    void onDownloadProgress(qint64 received, qint64 total);
 
 private:
     QString ensureCacheDir() const;
@@ -163,6 +166,8 @@ private:
     bool m_verbose;
     mutable QString m_effectiveDir;
     bool m_wired;
+    QSet<QFutureWatcher<bool> *> m_processing;
+    int m_generation;
 };
 
 } // namespace nm

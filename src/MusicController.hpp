@@ -1535,6 +1535,11 @@ private:
     /*! 列表是否在滚动（滚动中推迟刷新，见 setScrolling） */
     bool m_scrolling;
     QTimer *m_imageRefreshTimer;
+    bool m_imageNotifyPending;
+    bool m_imageRefreshAgain;
+    int m_imageRefreshTarget;
+    int m_imageRefreshRow;
+    QVariantList m_imageRefreshGroupPath;
 
     QVariantMap m_playlistInfo;
     int m_playlistInfoVersion;
